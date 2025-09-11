@@ -1,0 +1,204 @@
+{
+	"company": "TechCorp Solutions",
+	"founded": 2018,
+	"employees": [
+		{
+			"id": 1,
+			"name": "Alice Johnson",
+			"position": "Software Engineer",
+			"department": "Engineering",
+			"salary": 85000,
+			"skills": ["JavaScript", "Python", "React", "Node.js"],
+			"contact": {
+				"email": "alice.johnson@techcorp.com",
+				"phone": "+1-555-0101",
+				"address": {
+					"street": "123 Main St",
+					"city": "San Francisco",
+					"state": "CA",
+					"zipCode": "94105"
+				}
+			},
+			"projects": [
+				{
+					"name": "E-commerce Platform",
+					"status": "completed",
+					"duration": 6,
+					"technologies": ["React", "Node.js", "MongoDB"]
+				},
+				{
+					"name": "Mobile App API",
+					"status": "in-progress",
+					"duration": 4,
+					"technologies": ["Python", "FastAPI", "PostgreSQL"]
+				}
+			],
+			"performance": {
+				"rating": 4.5,
+				"reviews": [
+					{
+						"quarter": "Q1 2024",
+						"score": 4.2,
+						"feedback": "Excellent problem-solving skills"
+					},
+					{
+						"quarter": "Q2 2024",
+						"score": 4.8,
+						"feedback": "Outstanding team collaboration"
+					}
+				]
+			}
+		},
+		{
+			"id": 2,
+			"name": "Bob Smith",
+			"position": "Data Scientist",
+			"department": "Analytics",
+			"salary": 95000,
+			"skills": ["Python", "R", "Machine Learning", "SQL", "Tableau"],
+			"contact": {
+				"email": "bob.smith@techcorp.com",
+				"phone": "+1-555-0102",
+				"address": {
+					"street": "456 Oak Ave",
+					"city": "Austin",
+					"state": "TX",
+					"zipCode": "73301"
+				}
+			},
+			"projects": [
+				{
+					"name": "Customer Segmentation",
+					"status": "completed",
+					"duration": 3,
+					"technologies": ["Python", "scikit-learn", "Pandas"]
+				},
+				{
+					"name": "Predictive Analytics Dashboard",
+					"status": "planning",
+					"duration": 8,
+					"technologies": ["R", "Shiny", "PostgreSQL"]
+				}
+			],
+			"performance": {
+				"rating": 4.3,
+				"reviews": [
+					{
+						"quarter": "Q1 2024",
+						"score": 4.1,
+						"feedback": "Strong analytical thinking"
+					},
+					{
+						"quarter": "Q2 2024",
+						"score": 4.5,
+						"feedback": "Great insights and presentations"
+					}
+				]
+			}
+		},
+		{
+			"id": 3,
+			"name": "Carol Davis",
+			"position": "UX Designer",
+			"department": "Design",
+			"salary": 78000,
+			"skills": ["Figma", "Adobe XD", "User Research", "Prototyping"],
+			"contact": {
+				"email": "carol.davis@techcorp.com",
+				"phone": "+1-555-0103",
+				"address": {
+					"street": "789 Pine Blvd",
+					"city": "Seattle",
+					"state": "WA",
+					"zipCode": "98101"
+				}
+			},
+			"projects": [
+				{
+					"name": "Mobile App Redesign",
+					"status": "in-progress",
+					"duration": 5,
+					"technologies": ["Figma", "Principle", "InVision"]
+				}
+			],
+			"performance": {
+				"rating": 4.7,
+				"reviews": [
+					{
+						"quarter": "Q1 2024",
+						"score": 4.6,
+						"feedback": "Creative and user-focused designs"
+					},
+					{
+						"quarter": "Q2 2024",
+						"score": 4.8,
+						"feedback": "Exceptional user research skills"
+					}
+				]
+			}
+		}
+	],
+	"departments": {
+		"Engineering": {
+			"manager": "David Wilson",
+			"budget": 1200000,
+			"headCount": 12,
+			"technologies": ["JavaScript", "Python", "Java", "Go", "Docker"],
+			"projects": ["E-commerce Platform", "Mobile App API", "Cloud Migration"]
+		},
+		"Analytics": {
+			"manager": "Emma Brown",
+			"budget": 800000,
+			"headCount": 6,
+			"technologies": ["Python", "R", "SQL", "Tableau", "Apache Spark"],
+			"projects": ["Customer Segmentation", "Predictive Analytics Dashboard"]
+		},
+		"Design": {
+			"manager": "Frank Miller",
+			"budget": 450000,
+			"headCount": 4,
+			"technologies": ["Figma", "Adobe Creative Suite", "Sketch", "InVision"],
+			"projects": ["Mobile App Redesign", "Brand Guidelines Update"]
+		}
+	},
+	"benefits": {
+		"healthInsurance": {
+			"provider": "Blue Cross",
+			"coverage": ["medical", "dental", "vision"],
+			"employeeContribution": 15
+		},
+		"retirement": {
+			"plan": "401k",
+			"companyMatch": 4,
+			"vestingSchedule": [0, 25, 50, 75, 100]
+		},
+		"timeOff": {
+			"vacation": 20,
+			"sick": 10,
+			"holidays": [
+				"New Year's Day",
+				"Memorial Day",
+				"Independence Day",
+				"Labor Day",
+				"Thanksgiving",
+				"Christmas"
+			]
+		}
+	},
+	"locations": [
+		{
+			"city": "San Francisco",
+			"state": "CA",
+			"isHeadquarters": true,
+			"employeeCount": 45,
+			"facilities": ["main office", "cafeteria", "gym"]
+		},
+		{
+			"city": "Austin",
+			"state": "TX",
+			"isHeadquarters": false,
+			"employeeCount": 23,
+			"facilities": ["satellite office", "conference rooms"]
+		}
+	]
+}
