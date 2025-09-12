@@ -3,6 +3,7 @@ Great question 🚀 — you’re asking about **JavaScript Execution Context**, 
 ---
 
 ## 🔹 1. What is Execution Context?
+
 <img width="838" height="431" alt="image" src="https://github.com/user-attachments/assets/f432ad24-c04c-4441-a2e8-15d1f03b3f50" />
 
 <img width="826" height="420" alt="image" src="https://github.com/user-attachments/assets/2c185979-372d-4101-8bc5-1eac80a847bb" />
@@ -11,9 +12,9 @@ An **Execution Context (EC)** is the environment in which JavaScript code is eva
 
 Whenever you run JS code, the engine creates an **execution context** to keep track of:
 
-* **Where the code is executed**
-* **What variables/functions are available**
-* **How the scope works**
+- **Where the code is executed**
+- **What variables/functions are available**
+- **How the scope works**
 
 ---
 
@@ -23,20 +24,20 @@ There are mainly **three types**:
 
 1. **Global Execution Context (GEC)**
 
-   * Created when the JS program starts.
-   * `window` (in browsers) or `global` (in Node.js) is created.
-   * `this` points to the global object.
-   * Only one GEC exists at a time.
+   - Created when the JS program starts.
+   - `window` (in browsers) or `global` (in Node.js) is created.
+   - `this` points to the global object.
+   - Only one GEC exists at a time.
 
 2. **Function Execution Context (FEC)**
 
-   * Created every time a function is called.
-   * Each function call gets its own context (with its own variables, arguments, and scope).
-   * Many FECs can exist at the same time (inside the Call Stack).
+   - Created every time a function is called.
+   - Each function call gets its own context (with its own variables, arguments, and scope).
+   - Many FECs can exist at the same time (inside the Call Stack).
 
 3. **Eval Execution Context** (rare, when using `eval()`)
 
-   * Not commonly used in practice.
+   - Not commonly used in practice.
 
 ---
 
@@ -46,20 +47,20 @@ Each Execution Context has **two main parts**:
 
 1. **Memory Component (Variable Environment / Creation Phase)**
 
-   * Stores **variables** and **function declarations** in memory as key–value pairs.
-   * Example:
+   - Stores **variables** and **function declarations** in memory as key–value pairs.
+   - Example:
 
      ```js
      var a = 10;
      function foo() { ... }
      ```
 
-     * Memory: `a: undefined`, `foo: function(){...}`
+     - Memory: `a: undefined`, `foo: function(){...}`
 
 2. **Code Component (Thread of Execution / Execution Phase)**
 
-   * Executes the code line by line.
-   * Assigns actual values to variables, executes functions, etc.
+   - Executes the code line by line.
+   - Assigns actual values to variables, executes functions, etc.
 
 ---
 
@@ -69,20 +70,20 @@ JavaScript uses a **two-phase process** inside each Execution Context:
 
 ### (a) **Creation Phase (Memory Creation Phase)**
 
-* Happens first, before any code is executed.
-* JS engine scans the code:
+- Happens first, before any code is executed.
+- JS engine scans the code:
 
-  * Variables declared with `var` are **hoisted** → memory reserved, initialized to `undefined`.
-  * Functions are hoisted fully → stored as function objects.
-  * `let` and `const` are hoisted too but kept in the **Temporal Dead Zone (TDZ)** (not accessible until initialized).
+  - Variables declared with `var` are **hoisted** → memory reserved, initialized to `undefined`.
+  - Functions are hoisted fully → stored as function objects.
+  - `let` and `const` are hoisted too but kept in the **Temporal Dead Zone (TDZ)** (not accessible until initialized).
 
 ### (b) **Execution Phase (Code Execution Phase)**
 
-* Code is run line by line:
+- Code is run line by line:
 
-  * Assigns values to variables.
-  * Executes function calls → creates new Function Execution Contexts.
-  * Uses the **call stack** to manage execution.
+  - Assigns values to variables.
+  - Executes function calls → creates new Function Execution Contexts.
+  - Uses the **call stack** to manage execution.
 
 ---
 
@@ -91,8 +92,8 @@ JavaScript uses a **two-phase process** inside each Execution Context:
 ```js
 var x = 10;
 function greet() {
-    var y = 20;
-    console.log(x + y);
+	var y = 20;
+	console.log(x + y);
 }
 greet();
 ```
@@ -101,8 +102,8 @@ greet();
 
 Memory:
 
-* `x: undefined`
-* `greet: function() {...}`
+- `x: undefined`
+- `greet: function() {...}`
 
 Code not yet executed.
 
@@ -110,8 +111,8 @@ Code not yet executed.
 
 ### Step 2: Global Execution Context (Execution Phase)
 
-* `x = 10`
-* Encounters `greet()` → pushes new **Function Execution Context** onto call stack.
+- `x = 10`
+- Encounters `greet()` → pushes new **Function Execution Context** onto call stack.
 
 ---
 
@@ -119,49 +120,49 @@ Code not yet executed.
 
 Memory:
 
-* `y: undefined`
+- `y: undefined`
 
 ---
 
 ### Step 4: Function Execution Context (Execution Phase)
 
-* `y = 20`
-* `console.log(x + y)` → finds `x` from outer scope (lexical scope), prints `30`.
-* Function context is popped from the stack.
+- `y = 20`
+- `console.log(x + y)` → finds `x` from outer scope (lexical scope), prints `30`.
+- Function context is popped from the stack.
 
 ---
 
 ### 🔹 6. The Call Stack
 
-* JS engine manages contexts using a **Call Stack**:
+- JS engine manages contexts using a **Call Stack**:
 
-  * Push new Function Execution Context when a function is called.
-  * Pop it after the function finishes.
+  - Push new Function Execution Context when a function is called.
+  - Pop it after the function finishes.
 
 ---
 
 ✅ **In summary:**
 
-* Execution Context = environment where JS runs.
-* Contains **Memory (variables/functions)** + **Code execution thread**.
-* Code runs in **two phases**:
+- Execution Context = environment where JS runs.
+- Contains **Memory (variables/functions)** + **Code execution thread**.
+- Code runs in **two phases**:
 
   1. **Creation Phase (hoisting, memory allocation)**
   2. **Execution Phase (line-by-line execution, assigning values, running functions)**
 
 ---
 
-Would you like me to also **draw a visual diagram (stack + memory layout)** for your example code so you can *see* how JS engine executes it?
+Would you like me to also **draw a visual diagram (stack + memory layout)** for your example code so you can _see_ how JS engine executes it?
 
-Perfect 👌 Let’s animate step by step in **ASCII diagrams** so you can *see* the stack grow and shrink as JS executes.
+Perfect 👌 Let’s animate step by step in **ASCII diagrams** so you can _see_ the stack grow and shrink as JS executes.
 
 We’ll use the same example:
 
 ```js
 var x = 10;
 function greet() {
-    var y = 20;
-    console.log(x + y);
+	var y = 20;
+	console.log(x + y);
 }
 greet();
 ```
@@ -170,8 +171,8 @@ greet();
 
 # 🔹 Step 0: Start Program
 
-* JS engine creates **Global Execution Context (GEC)**.
-* Memory is empty at first.
+- JS engine creates **Global Execution Context (GEC)**.
+- Memory is empty at first.
 
 ```
 MEMORY
@@ -188,8 +189,8 @@ CALL STACK
 
 # 🔹 Step 1: Execute Global Code
 
-* Assign `x = 10`
-* `greet` already in memory as function.
+- Assign `x = 10`
+- `greet` already in memory as function.
 
 ```
 MEMORY
@@ -228,8 +229,8 @@ CALL STACK
 
 # 🔹 Step 3: Execute greet() code
 
-* Assign `y = 20`
-* Execute `console.log(x + y)` → finds `x=10` from GEC and `y=20` from FEC → prints **30**.
+- Assign `y = 20`
+- Execute `console.log(x + y)` → finds `x=10` from GEC and `y=20` from FEC → prints **30**.
 
 ```
 MEMORY (inside greet FEC)
@@ -251,8 +252,8 @@ CALL STACK
 
 # 🔹 Step 4: Function Ends → Pop FEC
 
-* `greet` finishes → its execution context is removed from stack.
-* Only GEC remains.
+- `greet` finishes → its execution context is removed from stack.
+- Only GEC remains.
 
 ```
 MEMORY (GEC)
@@ -269,8 +270,8 @@ CALL STACK
 
 # 🔹 Step 5: Program Ends
 
-* Global EC is popped off → stack is empty.
-* JS stops execution.
+- Global EC is popped off → stack is empty.
+- JS stops execution.
 
 ```
 CALL STACK
@@ -282,18 +283,16 @@ CALL STACK
 
 ✅ **Summary of animation**
 
-* **Step 0:** Create Global EC
-* **Step 1:** Run global code → allocate/assign
-* **Step 2:** Call function → push FEC
-* **Step 3:** Execute FEC → use memory + scope chain
-* **Step 4:** Function returns → pop FEC
-* **Step 5:** End → pop GEC
+- **Step 0:** Create Global EC
+- **Step 1:** Run global code → allocate/assign
+- **Step 2:** Call function → push FEC
+- **Step 3:** Execute FEC → use memory + scope chain
+- **Step 4:** Function returns → pop FEC
+- **Step 5:** End → pop GEC
 
 ---
 
-Would you like me to now **animate the same thing but with a closure example** (so you can see how memory is *not released* when a function returns)?
-
-
+Would you like me to now **animate the same thing but with a closure example** (so you can see how memory is _not released_ when a function returns)?
 
 ## 🔹 What is **Hoisting** in JavaScript?
 
@@ -301,23 +300,23 @@ Hoisting is **JavaScript’s default behavior** of moving **declarations (not in
 
 👉 In simple words:
 
-* Variables declared with `var` and all `function declarations` are **hoisted** to the top.
-* `let` and `const` are hoisted too, but they stay in the **Temporal Dead Zone (TDZ)** until their declaration line is reached.
+- Variables declared with `var` and all `function declarations` are **hoisted** to the top.
+- `let` and `const` are hoisted too, but they stay in the **Temporal Dead Zone (TDZ)** until their declaration line is reached.
 
 ---
 
 ### Example:
 
 ```js
-console.log(a);   // undefined (hoisted, but not initialized)
+console.log(a); // undefined (hoisted, but not initialized)
 var a = 10;
 
-sayHello();       // "Hello!" (function declaration hoisted)
+sayHello(); // "Hello!" (function declaration hoisted)
 function sayHello() {
-  console.log("Hello!");
+	console.log("Hello!");
 }
 
-console.log(b);   // ❌ ReferenceError (TDZ)
+console.log(b); // ❌ ReferenceError (TDZ)
 let b = 20;
 ```
 
@@ -332,27 +331,27 @@ Execution happens in **two phases** inside an **Execution Context**.
 
 ### 1. **Creation Phase (Memory allocation / Hoisting happens here)**
 
-* The JS engine scans the code before execution.
-* Creates a **Global Execution Context (GEC)** (or Function Execution Context if inside a function).
-* Inside that context, it builds a **Memory Component** and an **Execution Component**.
+- The JS engine scans the code before execution.
+- Creates a **Global Execution Context (GEC)** (or Function Execution Context if inside a function).
+- Inside that context, it builds a **Memory Component** and an **Execution Component**.
 
 👉 Memory Component (aka **Variable Environment**):
 
-* `var` variables are set to `undefined`.
-* `let` and `const` are hoisted but kept **uninitialized** (TDZ).
-* Functions are stored with their entire definition.
+- `var` variables are set to `undefined`.
+- `let` and `const` are hoisted but kept **uninitialized** (TDZ).
+- Functions are stored with their entire definition.
 
 👉 Execution Component (aka **Thread of Execution**):
 
-* Code runs line by line after memory setup.
+- Code runs line by line after memory setup.
 
 ---
 
 ### 2. **Execution Phase**
 
-* JS executes code line by line.
-* Assigns actual values to variables.
-* Runs functions when called.
+- JS executes code line by line.
+- Assigns actual values to variables.
+- Runs functions when called.
 
 ---
 
@@ -367,7 +366,7 @@ let y = 10;
 
 foo();
 function foo() {
-  console.log("Inside foo");
+	console.log("Inside foo");
 }
 ```
 
@@ -375,9 +374,9 @@ function foo() {
 
 🔸 **Creation Phase:**
 
-* `x` → `undefined`
-* `y` → in TDZ (not accessible yet)
-* `foo` → function stored in memory
+- `x` → `undefined`
+- `y` → in TDZ (not accessible yet)
+- `foo` → function stored in memory
 
 🔸 **Execution Phase:**
 
@@ -422,6 +421,7 @@ Call Stack:
 ✅ So hoisting = declarations go to the top, thanks to the **creation phase** of the JS engine when it sets up memory before execution.
 
 ---
+
 <img width="1429" height="732" alt="0fe43c55-c941-4a7b-a8f7-1f788cec9611" src="https://github.com/user-attachments/assets/ebedeb7d-0aca-4fc6-a774-50c5fd91da89" />
 
 Great question 👍 This goes right into the heart of how **`let`** and **`const`** differ from `var` in JavaScript. Let’s carefully break it down:
@@ -430,14 +430,14 @@ Great question 👍 This goes right into the heart of how **`let`** and **`const
 
 # 🔹 1. Hoisting Recap
 
-* **Hoisting** = JS moves **declarations** to the top of the scope **before code execution**.
-* But *how* the variable is initialized after hoisting depends on `var`, `let`, or `const`.
+- **Hoisting** = JS moves **declarations** to the top of the scope **before code execution**.
+- But _how_ the variable is initialized after hoisting depends on `var`, `let`, or `const`.
 
 | Keyword | Hoisted? | Default Value Before Initialization         | Accessible Before Declaration? |
 | ------- | -------- | ------------------------------------------- | ------------------------------ |
-| `var`   | ✅ Yes    | `undefined`                                 | Yes (but undefined)            |
-| `let`   | ✅ Yes    | **Uninitialized** (not `undefined`)         | ❌ No (TDZ error)               |
-| `const` | ✅ Yes    | **Uninitialized** (must assign immediately) | ❌ No (TDZ error)               |
+| `var`   | ✅ Yes   | `undefined`                                 | Yes (but undefined)            |
+| `let`   | ✅ Yes   | **Uninitialized** (not `undefined`)         | ❌ No (TDZ error)              |
+| `const` | ✅ Yes   | **Uninitialized** (must assign immediately) | ❌ No (TDZ error)              |
 
 ---
 
@@ -454,8 +454,8 @@ console.log(c); // ✅ undefined (var hoisting works)
 var c = 20;
 ```
 
-* **`var`**: declaration is hoisted, initialized to `undefined`.
-* **`let` / `const`**: declaration is hoisted, but **not initialized** → they live in a **Temporal Dead Zone (TDZ)** until the actual line of declaration is executed.
+- **`var`**: declaration is hoisted, initialized to `undefined`.
+- **`let` / `const`**: declaration is hoisted, but **not initialized** → they live in a **Temporal Dead Zone (TDZ)** until the actual line of declaration is executed.
 
 ---
 
@@ -467,18 +467,18 @@ Example:
 
 ```js
 {
-  // TDZ for "x" starts here
-  console.log(x); // ❌ ReferenceError: Cannot access 'x' before initialization
-  let x = 42;     // TDZ ends here, now usable
-  console.log(x); // ✅ 42
+	// TDZ for "x" starts here
+	console.log(x); // ❌ ReferenceError: Cannot access 'x' before initialization
+	let x = 42; // TDZ ends here, now usable
+	console.log(x); // ✅ 42
 }
 ```
 
 So:
 
-* `let` and `const` exist in memory from the beginning of scope (hoisted).
-* But until the declaration line is executed, they are **uninitialized**.
-* That uninitialized state = **TDZ**.
+- `let` and `const` exist in memory from the beginning of scope (hoisted).
+- But until the declaration line is executed, they are **uninitialized**.
+- That uninitialized state = **TDZ**.
 
 ---
 
@@ -486,7 +486,7 @@ So:
 
 1. **ReferenceError**
 
-   * When you access a variable in TDZ:
+   - When you access a variable in TDZ:
 
    ```js
    console.log(x); // ❌ ReferenceError
@@ -495,7 +495,7 @@ So:
 
 2. **SyntaxError**
 
-   * If you redeclare a `let` or `const` in the same scope:
+   - If you redeclare a `let` or `const` in the same scope:
 
    ```js
    let y = 10;
@@ -504,7 +504,7 @@ So:
 
 3. **TypeError**
 
-   * With `const`, you **must** assign a value at declaration.
+   - With `const`, you **must** assign a value at declaration.
 
    ```js
    const z; // ❌ SyntaxError (missing initializer)
@@ -523,10 +523,10 @@ So:
 
 ✅ **In summary:**
 
-* `let` & `const` are **hoisted** but **uninitialized** → TDZ until declaration.
-* Accessing them before declaration = **ReferenceError**.
-* `const` must also be initialized at declaration → otherwise **SyntaxError**.
-* TDZ exists to protect us from using variables incorrectly before they are ready.
+- `let` & `const` are **hoisted** but **uninitialized** → TDZ until declaration.
+- Accessing them before declaration = **ReferenceError**.
+- `const` must also be initialized at declaration → otherwise **SyntaxError**.
+- TDZ exists to protect us from using variables incorrectly before they are ready.
 
 ---
 
@@ -539,9 +539,9 @@ We’ll see how memory is allocated in the **Creation Phase** (before execution)
 # 🔹 Example Code
 
 ```js
-console.log(a);   // ?
-console.log(b);   // ?
-console.log(c);   // ?
+console.log(a); // ?
+console.log(b); // ?
+console.log(c); // ?
 
 var a = 10;
 let b = 20;
@@ -578,33 +578,33 @@ Now JS executes code top to bottom.
 
 1. `console.log(a);`
 
-   * Looks up memory: `a = undefined`
-   * ✅ Prints `undefined`
+   - Looks up memory: `a = undefined`
+   - ✅ Prints `undefined`
 
 2. `console.log(b);`
 
-   * `b` exists in memory but is still **uninitialized (TDZ)**
-   * ❌ Throws **ReferenceError: Cannot access 'b' before initialization**
+   - `b` exists in memory but is still **uninitialized (TDZ)**
+   - ❌ Throws **ReferenceError: Cannot access 'b' before initialization**
 
 3. (Execution stops here because of the error, but let’s continue hypothetically)
 
-   * `console.log(c);`
+   - `console.log(c);`
 
-     * Also in TDZ
-     * ❌ ReferenceError
+     - Also in TDZ
+     - ❌ ReferenceError
 
 4. `var a = 10;`
 
-   * Assigns `10` to `a`
+   - Assigns `10` to `a`
 
 5. `let b = 20;`
 
-   * Leaves TDZ, initializes with `20`
+   - Leaves TDZ, initializes with `20`
 
 6. `const c = 30;`
 
-   * Leaves TDZ, initializes with `30`
-   * Note: If you had written `const c;` without value, it would ❌ throw SyntaxError at parse time.
+   - Leaves TDZ, initializes with `30`
+   - Note: If you had written `const c;` without value, it would ❌ throw SyntaxError at parse time.
 
 ---
 
@@ -629,9 +629,9 @@ c = 30
 
 # 🔹 Errors Recap (Why They Happen)
 
-* `var` → Safe to use before declaration (but prints `undefined`).
-* `let` → In TDZ → ReferenceError if accessed before declaration.
-* `const` → Same as `let` + must be initialized at declaration.
+- `var` → Safe to use before declaration (but prints `undefined`).
+- `let` → In TDZ → ReferenceError if accessed before declaration.
+- `const` → Same as `let` + must be initialized at declaration.
 
 ---
 
@@ -652,15 +652,15 @@ It is used in **if, for, while, functions, etc.**
 
 ```js
 {
-    let x = 10;
-    const y = 20;
-    var z = 30;
+	let x = 10;
+	const y = 20;
+	var z = 30;
 }
 ```
 
-* `let` and `const` → block-scoped (they exist only inside `{ }`).
-* `var` → **NOT block-scoped** (only function-scoped / global-scoped).
-* ** When we dont declared a variable it will global scope inrrespective where it lives in the code 
+- `let` and `const` → block-scoped (they exist only inside `{ }`).
+- `var` → **NOT block-scoped** (only function-scoped / global-scoped).
+- \*\* When we dont declared a variable it will global scope inrrespective where it lives in the code
 
 ---
 
@@ -668,14 +668,14 @@ It is used in **if, for, while, functions, etc.**
 
 ```js
 {
-    let a = 1;
-    const b = 2;
-    var c = 3;
+	let a = 1;
+	const b = 2;
+	var c = 3;
 }
 
 console.log(typeof a); // ❌ ReferenceError (block scoped)
 console.log(typeof b); // ❌ ReferenceError (block scoped)
-console.log(c);        // ✅ 3 (var ignores block)
+console.log(c); // ✅ 3 (var ignores block)
 ```
 
 ---
@@ -693,11 +693,11 @@ The **inner declaration shadows (hides)** the outer one inside that scope.
 var x = 100;
 
 {
-    var x = 200;  // same variable (since var is function/global scoped)
-    console.log("Inside block:", x); // 200
+	var x = 200; // same variable (since var is function/global scoped)
+	console.log("Inside block:", x); // 200
 }
 
-console.log("Outside block:", x);    // 200 (outer also changed!)
+console.log("Outside block:", x); // 200 (outer also changed!)
 ```
 
 👉 Here, the **outer variable got overwritten** because `var` does not respect block scope.
@@ -710,11 +710,11 @@ console.log("Outside block:", x);    // 200 (outer also changed!)
 let y = 100;
 
 {
-    let y = 200;   // New variable (block scoped)
-    console.log("Inside block:", y); // 200
+	let y = 200; // New variable (block scoped)
+	console.log("Inside block:", y); // 200
 }
 
-console.log("Outside block:", y);    // 100 (outer is safe)
+console.log("Outside block:", y); // 100 (outer is safe)
 ```
 
 👉 Here, **outer variable is not changed**. Inner `y` shadows outer `y` only inside the block.
@@ -727,12 +727,12 @@ console.log("Outside block:", y);    // 100 (outer is safe)
 let z = "global";
 
 function test() {
-    let z = "function";
-    console.log("Inside function:", z); // function
+	let z = "function";
+	console.log("Inside function:", z); // function
 }
 
 test();
-console.log("Outside function:", z);    // global
+console.log("Outside function:", z); // global
 ```
 
 ---
@@ -747,7 +747,7 @@ JavaScript **does not allow certain shadowing** when `let/const` conflict with `
 let a = 10;
 
 {
-    var a = 20;   // ❌ SyntaxError: Identifier 'a' has already been declared
+	var a = 20; // ❌ SyntaxError: Identifier 'a' has already been declared
 }
 ```
 
@@ -757,20 +757,20 @@ let a = 10;
 var b = 10;
 
 {
-    let b = 20;   // ✅ Legal (different scope)
-    console.log(b); // 20
+	let b = 20; // ✅ Legal (different scope)
+	console.log(b); // 20
 }
 
-console.log(b);   // 10
+console.log(b); // 10
 ```
 
 ---
 
 # 🔹 Quick Summary
 
-* **Block** → `{ }`, where `let`/`const` are confined but `var` escapes.
-* **Shadowing** → Redeclaring a variable inside a new scope hides the outer one.
-* **Illegal Shadowing** → `let/const` can’t be shadowed by `var` in the same scope.
+- **Block** → `{ }`, where `let`/`const` are confined but `var` escapes.
+- **Shadowing** → Redeclaring a variable inside a new scope hides the outer one.
+- **Illegal Shadowing** → `let/const` can’t be shadowed by `var` in the same scope.
 
 ---
 
@@ -805,14 +805,14 @@ Closures let us:
 
 ```js
 function outer() {
-    let count = 0;
+	let count = 0;
 
-    function inner() {
-        count++;   // inner remembers "count" from outer
-        console.log(count);
-    }
+	function inner() {
+		count++; // inner remembers "count" from outer
+		console.log(count);
+	}
 
-    return inner;
+	return inner;
 }
 
 const fn = outer(); // outer finishes, but...
@@ -831,19 +831,19 @@ fn(); // 3
 
 ```js
 function counter() {
-    let value = 0;
+	let value = 0;
 
-    return {
-        increment: () => ++value,
-        decrement: () => --value,
-        get: () => value
-    };
+	return {
+		increment: () => ++value,
+		decrement: () => --value,
+		get: () => value,
+	};
 }
 
 const c = counter();
 console.log(c.increment()); // 1
 console.log(c.increment()); // 2
-console.log(c.get());       // 2
+console.log(c.get()); // 2
 console.log(c.decrement()); // 1
 ```
 
@@ -855,9 +855,9 @@ console.log(c.decrement()); // 1
 
 ```js
 function multiplier(factor) {
-    return function(num) {
-        return num * factor;
-    };
+	return function (num) {
+		return num * factor;
+	};
 }
 
 const double = multiplier(2);
@@ -875,7 +875,7 @@ console.log(triple(5)); // 15
 
 ```js
 for (var i = 1; i <= 3; i++) {
-    setTimeout(() => console.log(i), 1000);
+	setTimeout(() => console.log(i), 1000);
 }
 // Output after 1 sec: 4, 4, 4
 ```
@@ -886,7 +886,7 @@ for (var i = 1; i <= 3; i++) {
 
 ```js
 for (let i = 1; i <= 3; i++) {
-    setTimeout(() => console.log(i), 1000);
+	setTimeout(() => console.log(i), 1000);
 }
 // Output: 1, 2, 3
 ```
@@ -895,9 +895,9 @@ for (let i = 1; i <= 3; i++) {
 
 ```js
 for (var i = 1; i <= 3; i++) {
-    (function(x) {
-        setTimeout(() => console.log(x), 1000);
-    })(i);
+	(function (x) {
+		setTimeout(() => console.log(x), 1000);
+	})(i);
 }
 // Output: 1, 2, 3
 ```
@@ -910,10 +910,10 @@ Closures can unintentionally keep references alive and prevent garbage collectio
 
 ```js
 function leaky() {
-    let bigArray = new Array(1000000).fill("data");
-    return function() {
-        console.log("Still alive");
-    };
+	let bigArray = new Array(1000000).fill("data");
+	return function () {
+		console.log("Still alive");
+	};
 }
 
 const leak = leaky();
@@ -926,10 +926,10 @@ const leak = leaky();
 
 # 🔹 6. Quick Summary
 
-* **Closure = Function + Lexical Scope**.
-* Lets a function remember outer variables even after execution.
-* Use cases: private vars, stateful functions, event handlers, factories.
-* Corner cases: `var` in loops, memory leaks.
+- **Closure = Function + Lexical Scope**.
+- Lets a function remember outer variables even after execution.
+- Use cases: private vars, stateful functions, event handlers, factories.
+- Corner cases: `var` in loops, memory leaks.
 
 ---
 
@@ -943,9 +943,9 @@ Ahh 👍 you mean the **classic `setTimeout + var` closure interview question** 
 
 ```js
 for (var i = 1; i <= 3; i++) {
-  setTimeout(() => {
-    console.log(i);
-  }, 1000);
+	setTimeout(() => {
+		console.log(i);
+	}, 1000);
 }
 ```
 
@@ -974,9 +974,9 @@ for (var i = 1; i <= 3; i++) {
 
 ```js
 for (let i = 1; i <= 3; i++) {
-  setTimeout(() => {
-    console.log(i);
-  }, 1000);
+	setTimeout(() => {
+		console.log(i);
+	}, 1000);
 }
 ```
 
@@ -996,11 +996,11 @@ for (let i = 1; i <= 3; i++) {
 
 ```js
 for (var i = 1; i <= 3; i++) {
-  (function (x) {
-    setTimeout(() => {
-      console.log(x);
-    }, 1000);
-  })(i);
+	(function (x) {
+		setTimeout(() => {
+			console.log(x);
+		}, 1000);
+	})(i);
 }
 ```
 
@@ -1021,7 +1021,13 @@ for (var i = 1; i <= 3; i++) {
 
 ```js
 for (var i = 1; i <= 3; i++) {
-  setTimeout(((x) => () => console.log(x))(i), 1000);
+	setTimeout(
+		(
+			(x) => () =>
+				console.log(x)
+		)(i),
+		1000
+	);
 }
 ```
 
@@ -1029,7 +1035,7 @@ Or simply:
 
 ```js
 for (var i = 1; i <= 3; i++) {
-  setTimeout(console.log, 1000, i);
+	setTimeout(console.log, 1000, i);
 }
 ```
 
@@ -1072,12 +1078,12 @@ I’ll break it down piece by piece with **clear definitions, differences, and e
 
 ```js
 function greet(name) {
-  return `Hello, ${name}!`;
+	return `Hello, ${name}!`;
 }
 ```
 
-* **Hoisted** → You can call it *before* it’s defined.
-* **Named** → Always has a name (`greet`).
+- **Hoisted** → You can call it _before_ it’s defined.
+- **Named** → Always has a name (`greet`).
 
 ✅ Example (real-world):
 Imagine you have a **contact list** function declared at the start of a file.
@@ -1087,7 +1093,7 @@ Even if you call it from anywhere, the engine knows about it in advance.
 sayHello("John");
 
 function sayHello(name) {
-  console.log("Hello " + name);
+	console.log("Hello " + name);
 }
 ```
 
@@ -1104,13 +1110,13 @@ Hello John
 👉 A function assigned to a variable.
 
 ```js
-const greet = function(name) {
-  return `Hello, ${name}!`;
+const greet = function (name) {
+	return `Hello, ${name}!`;
 };
 ```
 
-* **Not hoisted** → Can’t call before definition.
-* Can be **anonymous** or **named**.
+- **Not hoisted** → Can’t call before definition.
+- Can be **anonymous** or **named**.
 
 ✅ Example:
 You pass functions as data (like assigning a contact to a phone number).
@@ -1118,8 +1124,8 @@ You pass functions as data (like assigning a contact to a phone number).
 ```js
 // Try calling greet("John") here → ❌ Error
 
-const greet = function(name) {
-  return `Hi ${name}`;
+const greet = function (name) {
+	return `Hi ${name}`;
 };
 
 console.log(greet("John")); // ✅ Works
@@ -1133,13 +1139,13 @@ console.log(greet("John")); // ✅ Works
 Usually used inside callbacks or expressions.
 
 ```js
-setTimeout(function() {
-  console.log("This runs later");
+setTimeout(function () {
+	console.log("This runs later");
 }, 1000);
 ```
 
-* No identifier → Only useful in context.
-* Can’t reuse it outside.
+- No identifier → Only useful in context.
+- Can’t reuse it outside.
 
 Real-world analogy: **One-time use note** – you write it, use it once, then throw it away.
 
@@ -1151,19 +1157,19 @@ Real-world analogy: **One-time use note** – you write it, use it once, then th
 
 ```js
 const greet = function sayHi(name) {
-  return `Hello ${name}`;
+	return `Hello ${name}`;
 };
 ```
 
-* The variable `greet` can be used to call it.
-* The internal name `sayHi` is **only visible inside** the function (useful for recursion or debugging).
+- The variable `greet` can be used to call it.
+- The internal name `sayHi` is **only visible inside** the function (useful for recursion or debugging).
 
 Example:
 
 ```js
 const factorial = function fact(n) {
-  if (n <= 1) return 1;
-  return n * fact(n - 1); // ✅ can call itself by its name
+	if (n <= 1) return 1;
+	return n * fact(n - 1); // ✅ can call itself by its name
 };
 ```
 
@@ -1179,22 +1185,22 @@ const greet = (name) => `Hello, ${name}!`;
 
 Differences from normal functions:
 
-* **No own `this`** (it uses the `this` of surrounding scope).
-* **No `arguments` object**.
-* Cannot be used as constructors (`new` won’t work).
-* More concise.
+- **No own `this`** (it uses the `this` of surrounding scope).
+- **No `arguments` object**.
+- Cannot be used as constructors (`new` won’t work).
+- More concise.
 
 Example:
 
 ```js
 const team = {
-  name: "Avengers",
-  members: ["Ironman", "Thor"],
-  showMembers: function() {
-    this.members.forEach(member => {
-      console.log(this.name + ": " + member);
-    });
-  }
+	name: "Avengers",
+	members: ["Ironman", "Thor"],
+	showMembers: function () {
+		this.members.forEach((member) => {
+			console.log(this.name + ": " + member);
+		});
+	},
 };
 
 team.showMembers();
@@ -1211,15 +1217,15 @@ If we used a normal function in `forEach`, `this` would be `undefined`.
 
 That means:
 
-* You can assign them to variables.
-* You can pass them as arguments.
-* You can return them from other functions.
+- You can assign them to variables.
+- You can pass them as arguments.
+- You can return them from other functions.
 
 Example:
 
 ```js
 function greet(name) {
-  return `Hello ${name}`;
+	return `Hello ${name}`;
 }
 
 // Assigned to variable
@@ -1227,16 +1233,16 @@ const fn = greet;
 
 // Passed as argument
 function execute(fn, value) {
-  return fn(value);
+	return fn(value);
 }
 
 console.log(execute(greet, "Sriram")); // Hello Sriram
 
 // Returned from another function
 function multiplier(x) {
-  return function(y) {
-    return x * y;
-  };
+	return function (y) {
+		return x * y;
+	};
 }
 
 const double = multiplier(2);
@@ -1252,20 +1258,20 @@ Functions in JS are like **VIPs** – you can give them a ticket (variable), sen
 
 | Type                      | Hoisted? | Named?  | Use Case                      |
 | ------------------------- | -------- | ------- | ----------------------------- |
-| Function Declaration      | ✅ Yes    | ✅ Yes   | Global reusable functions     |
-| Function Expression       | ❌ No     | Can be  | Assigned to vars, callbacks   |
-| Anonymous Function        | ❌ No     | ❌ No    | One-off callbacks             |
-| Named Function Expression | ❌ No     | ✅ Yes   | Recursion, debugging          |
-| Arrow Function            | ❌ No     | Depends | Short, modern, lexical `this` |
+| Function Declaration      | ✅ Yes   | ✅ Yes  | Global reusable functions     |
+| Function Expression       | ❌ No    | Can be  | Assigned to vars, callbacks   |
+| Anonymous Function        | ❌ No    | ❌ No   | One-off callbacks             |
+| Named Function Expression | ❌ No    | ✅ Yes  | Recursion, debugging          |
+| Arrow Function            | ❌ No    | Depends | Short, modern, lexical `this` |
 
 ---
 
 ✅ So in summary:
 
-* **Declaration** → Hoisted, classic function.
-* **Expression** → Not hoisted, can be anonymous/named.
-* **Arrow** → Short, no own `this`.
-* **Functions are first-class citizens** → you can treat them like data.
+- **Declaration** → Hoisted, classic function.
+- **Expression** → Not hoisted, can be anonymous/named.
+- **Arrow** → Short, no own `this`.
+- **Functions are first-class citizens** → you can treat them like data.
 
 ---
 
@@ -1292,22 +1298,22 @@ This ability is called **first-class functions** (or first-class citizens).
 
 ```js
 // Store in a variable
-const sayHello = function(name) {
-  return "Hello " + name;
+const sayHello = function (name) {
+	return "Hello " + name;
 };
 
 // Pass as an argument
 function greet(fn, name) {
-  return fn(name);
+	return fn(name);
 }
 
 console.log(greet(sayHello, "Sriram")); // Hello Sriram
 
 // Return from another function
 function multiplier(x) {
-  return function(y) {
-    return x * y;
-  };
+	return function (y) {
+		return x * y;
+	};
 }
 
 const double = multiplier(2);
@@ -1332,41 +1338,41 @@ So **higher-order functions are made possible because functions are first-class 
 ```js
 // Takes a function as argument
 function repeat(n, action) {
-  for (let i = 0; i < n; i++) {
-    action(i);
-  }
+	for (let i = 0; i < n; i++) {
+		action(i);
+	}
 }
 
-repeat(3, console.log); 
+repeat(3, console.log);
 // Logs: 0, 1, 2
 
 // Returns a function
 function power(exponent) {
-  return function(base) {
-    return base ** exponent;
-  };
+	return function (base) {
+		return base ** exponent;
+	};
 }
 
 const square = power(2);
 console.log(square(5)); // 25
 ```
 
-* `repeat` is a **higher-order function** (takes `action` function as input).
-* `power` is also a **higher-order function** (returns a new function).
+- `repeat` is a **higher-order function** (takes `action` function as input).
+- `power` is also a **higher-order function** (returns a new function).
 
 ---
 
 # 🔹 Difference in One Line
 
-* **First-class functions** → A language *feature*: functions are values, can be stored, passed, or returned.
-* **Higher-order functions** → A *use case*: functions that use other functions (take/return them).
+- **First-class functions** → A language _feature_: functions are values, can be stored, passed, or returned.
+- **Higher-order functions** → A _use case_: functions that use other functions (take/return them).
 
 ---
 
 # 🔹 Analogy (Real-World)
 
-* **First-class** = “Cars can drive on the road.” (a rule of the system)
-* **Higher-order** = “Uber cars pick up and drop passengers.” (a specific usage of cars).
+- **First-class** = “Cars can drive on the road.” (a rule of the system)
+- **Higher-order** = “Uber cars pick up and drop passengers.” (a specific usage of cars).
 
 So → **without first-class functions, higher-order functions are impossible.**
 
@@ -1381,3 +1387,333 @@ Answer:
 ---
 
 Do you want me to also give you **examples of built-in higher-order functions in JS** (like `map`, `filter`, `reduce`) and how they rely on first-class functions?
+
+Perfect! 🚀 Let’s go deep into **how the JavaScript engine works** — step by step, with a mental model that connects everything you’ve been learning about **synchronous vs asynchronous JS, event loop, memory, closures, etc.**
+
+---
+
+# 🧠 Big Picture: How JS Engine Works
+
+When we say "JavaScript Engine," the most famous one is **V8** (used in Chrome + Node.js).
+But all engines (SpiderMonkey in Firefox, JavaScriptCore in Safari) follow the **same core idea**.
+
+---
+
+## 🔹 1. JS Runtime Environment vs JS Engine
+
+- **JS Engine** = responsible for **parsing, compiling, executing JavaScript code**.
+  Example: V8 engine.
+
+  - Parts inside it: Parser, Interpreter, Compiler (JIT), Garbage Collector.
+
+- **JS Runtime Environment** (like Browser or Node.js) = Engine + Web APIs (DOM, Timers, Fetch, etc.) + Event Loop + Queues.
+
+👉 The **engine executes JS**, while the **runtime provides extra features**.
+
+---
+
+## 🔹 2. Inside the JS Engine
+
+Think of the JS engine as having these main components:
+
+### (a) **Parser**
+
+- Reads your JS code → checks for syntax errors.
+- Builds an **AST (Abstract Syntax Tree)**.
+
+```js
+function add(a, b) {
+	return a + b;
+}
+```
+
+➡️ Parser turns it into a tree structure that engine understands.
+
+---
+
+### (b) **Interpreter (Ignition in V8)**
+
+- First execution is **quick & dirty** → converts AST into **Bytecode**.
+- Bytecode is like an intermediate language (closer to machine code, but portable).
+
+---
+
+### (c) **JIT Compiler (TurboFan in V8)**
+
+- While running, engine watches what code is “hot” (used many times).
+- Optimizes that code into **real machine code** for speed.
+- Example: A loop running 1M times → gets optimized.
+
+---
+
+### (d) **Memory Heap + Call Stack**
+
+- **Heap** → where objects, functions, arrays live. (Big memory storage)
+- **Call Stack** → tracks execution order of functions.
+
+```js
+function a() {
+	b();
+}
+function b() {
+	console.log("Hello");
+}
+a();
+```
+
+Stack frames:
+
+```
+push a()
+  push b()
+    console.log
+  pop b()
+pop a()
+```
+
+---
+
+### (e) **Garbage Collector**
+
+- Removes objects that are no longer reachable (no references).
+- Uses algorithms like **Mark-and-Sweep**.
+
+---
+
+## 🔹 3. Execution Contexts
+
+Every time code runs, JS creates an **Execution Context**:
+
+1. **Global Execution Context** → created when file runs.
+2. **Function Execution Contexts** → created for each function call.
+
+Inside EC, you get:
+
+- **Variable Environment** (var, let, const)
+- **Scope Chain** (outer references for closures)
+- **this binding**
+
+---
+
+## 🔹 4. Synchronous Execution
+
+JS is **single-threaded**:
+
+- Only **one call stack**.
+- Runs one function at a time → blocks until done.
+
+```js
+console.log("1");
+console.log("2");
+```
+
+Output:
+
+```
+1
+2
+```
+
+---
+
+## 🔹 5. Asynchronous Execution with Runtime
+
+Engine **alone** cannot do async (no `setTimeout`, no `fetch`).
+The **runtime environment** (browser / Node.js) provides those.
+
+Flow:
+
+1. JS Engine executes sync code.
+2. Async tasks (`setTimeout`, `fetch`) are handed to **Web APIs**.
+3. Once done, results are queued in **Callback Queue / Microtask Queue**.
+4. **Event Loop** checks: if stack is empty → push queued task to stack.
+
+---
+
+## 🔹 6. Example of Full Flow
+
+```js
+console.log("Start");
+
+setTimeout(() => console.log("Timeout"), 0);
+
+Promise.resolve().then(() => console.log("Promise"));
+
+console.log("End");
+```
+
+### Step-by-step:
+
+1. Engine runs `console.log("Start")` → stack → logs.
+2. `setTimeout` → sent to Web APIs → callback scheduled in **macrotask queue**.
+3. `Promise.then` → scheduled in **microtask queue**.
+4. `console.log("End")` → logs.
+5. Stack empty → Event Loop checks microtasks first → `"Promise"`.
+6. Then → `"Timeout"` from macrotask queue.
+
+✅ Output:
+
+```
+Start
+End
+Promise
+Timeout
+```
+
+---
+
+# 📝 Summary
+
+- **Engine**: Parser → AST → Bytecode → JIT → Machine Code.
+- **Memory**: Heap for objects, Stack for function execution.
+- **Execution Context**: Global + Function contexts.
+- **Runtime**: Provides Web APIs, Event Loop, Queues.
+- **Event Loop**: Orchestrates async → Microtasks (Promises) first, then Macrotasks (Timers).
+
+---
+
+🔥 **Interview one-liner:**
+_"The JS Engine executes code (single-threaded), while the Runtime provides APIs for async tasks. The Event Loop coordinates execution between Call Stack, Microtask Queue, and Callback Queue."_
+
+---
+
+Would you like me to now **draw a diagram (step-by-step arrows)** showing how a line of JS moves from **Parser → AST → Call Stack → Web API → Queues → Event Loop → Back to Stack**? That usually makes the picture crystal clear.
+
+Perfect 🙌 — let’s build a **clear mental diagram** of how a line of JavaScript travels inside the **JS Engine + Runtime + Event Loop**.
+
+---
+
+# 🖼️ Flow of JavaScript Execution
+
+We’ll use this simple example:
+
+```js
+console.log("Start");
+
+setTimeout(() => console.log("Timeout"), 0);
+
+Promise.resolve().then(() => console.log("Promise"));
+
+console.log("End");
+```
+
+---
+
+## 🔹 Step 1: Parser & AST
+
+- Source code is parsed → checked for syntax.
+- Converted into **AST (Abstract Syntax Tree)**.
+
+---
+
+## 🔹 Step 2: Execution Context & Call Stack
+
+- Global Execution Context created.
+- Call Stack starts executing synchronously.
+
+Stack at start:
+
+```
+[ Global() ]
+```
+
+---
+
+## 🔹 Step 3: Line by Line Execution
+
+### `console.log("Start");`
+
+- Pushed to stack → executed → `"Start"` printed.
+- Stack empty again.
+
+---
+
+### `setTimeout(...)`
+
+- The **setTimeout function** itself is executed (pushed → popped).
+- Its callback (`() => console.log("Timeout")`) is **registered in Web API (Timer API)**.
+- After `0 ms`, it moves to **Macrotask Queue (Callback Queue)**.
+- **Does NOT execute immediately** → just scheduled.
+
+---
+
+### `Promise.resolve().then(...)`
+
+- Engine creates a resolved Promise.
+- `.then(...)` callback is registered in **Microtask Queue**.
+- (Microtasks are always processed before macrotasks.)
+
+---
+
+### `console.log("End");`
+
+- Logs `"End"`.
+- Stack empty again.
+
+---
+
+## 🔹 Step 4: Event Loop
+
+- Now call stack is empty.
+- Event Loop checks queues **in priority order**:
+
+1. **Microtask Queue** (Promise callbacks)
+2. **Macrotask Queue** (setTimeout, I/O, DOM events, etc.)
+
+---
+
+### Queue Processing Order
+
+- Microtask Queue → logs `"Promise"`.
+- Then Macrotask Queue → logs `"Timeout"`.
+
+---
+
+## 🔹 Step 5: Output Order
+
+Final order:
+
+```
+Start
+End
+Promise
+Timeout
+```
+
+---
+
+# 🖼️ Visual Diagram
+
+```
+ JS Engine (V8)                           Runtime (Browser / Node.js)
+┌────────────────┐                        ┌──────────────────────────┐
+│  Call Stack    │                        │ Web APIs (Timers, Fetch) │
+│────────────────│                        │                          │
+│ console.log    │ -- executes ---------->│                          │
+│ setTimeout     │ -- registers callback >│ setTimeout API           │
+│ Promise.then   │ -- registers callback >│ Promise API              │
+│ console.log    │                        │                          │
+└────────────────┘                        └──────────────────────────┘
+        │                                          │
+        ▼                                          ▼
+┌────────────────┐                        ┌──────────────────────────┐
+│ Microtask Q    │ <---- Promise.then ----│                          │
+│ Callback Q     │ <---- setTimeout ------│                          │
+└────────────────┘                        └──────────────────────────┘
+        │
+        ▼
+   Event Loop ─── pulls from queues ───> pushes back to Call Stack
+```
+
+---
+
+# ✅ Key Takeaways
+
+- **setTimeout** → goes to **Web API → Callback Queue (Macrotask)**.
+- **Promise.then** → goes to **Microtask Queue**.
+- **Event Loop** ensures **microtasks always run before macrotasks** once stack is empty.
+- JS execution is **non-blocking** because engine only runs sync code, while async is deferred via runtime APIs.
+
+---
+
+👉 Now, would you like me to **compare visually** how the same code executes differently if you use **callbacks vs promises vs async/await** (like three side-by-side flows)? That’s a killer interview explanation.
