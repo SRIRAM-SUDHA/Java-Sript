@@ -294,6 +294,128 @@ CALL STACK
 
 Would you like me to now **animate the same thing but with a closure example** (so you can see how memory is _not released_ when a function returns)?
 
+Great question 👍 Let’s go step by step.
+
+---
+
+## 🔹 What is **Scope**?
+
+In JavaScript, **scope** refers to the current context of execution — the area of the program where variables, functions, and objects are accessible.
+It decides **where you can use (or access) a variable** ( meaning it can be used and modified).
+
+Think of it like a boundary (or a box) around variables:
+
+- Inside the box → variable is visible.
+- Outside the box → variable is hidden.
+
+---
+
+## 🔹 Types of Scope in JavaScript
+
+### 1. **Global Scope**
+
+- Variables declared **outside any function or block**.
+- Accessible from **anywhere in the code**.
+
+```js
+let name = "Tony"; // global scope
+
+function greet() {
+	console.log("Hello " + name); // can access global variable
+}
+
+greet(); // Hello Tony
+console.log(name); // Tony
+```
+
+---
+
+### 2. **Function Scope** (Local Scope)
+
+- Variables declared **inside a function** are only accessible **within that function**.
+- Each function has its own scope.
+
+```js
+function test() {
+	let x = 10; // function scope
+	console.log(x);
+}
+
+test(); // 10
+console.log(x); // ❌ Error: x is not defined
+```
+
+---
+
+### 3. **Block Scope** (ES6: `let` and `const`)
+
+- Variables declared with `let` or `const` inside `{}` are only accessible **inside that block**.
+- But `var` ignores block scope (it’s function scoped).
+
+```js
+if (true) {
+	let a = 5; // block scoped
+	const b = 10; // block scoped
+	var c = 15; // NOT block scoped
+}
+
+console.log(c); // ✅ 15
+console.log(a); // ❌ Error
+console.log(b); // ❌ Error
+```
+
+---
+
+### 4. **Lexical Scope** (a.k.a Static Scope)
+
+- Inner functions can access variables of their parent (outer) functions **even after the parent has finished executing**.
+- This is what makes **closures** possible.
+
+```js
+function outer() {
+	let x = "outer variable";
+
+	function inner() {
+		console.log(x); // inner can access outer's scope
+	}
+
+	return inner;
+}
+
+let fn = outer();
+fn(); // "outer variable"
+```
+
+---
+
+### 5. **Module Scope** (ES6 Modules)
+
+- When you use **modules (`import` / `export`)**, variables inside a module are **scoped to that module**.
+- They’re not added to the global scope.
+
+```js
+// file: utils.js
+export let count = 0;
+
+// file: main.js
+import { count } from "./utils.js";
+console.log(count); // 0
+```
+
+---
+
+✅ **Summary of Scopes in JavaScript**
+
+1. **Global Scope** → accessible everywhere
+2. **Function Scope** → inside function only
+3. **Block Scope** → inside `{}` (with `let`/`const`)
+4. **Lexical Scope** → inner functions can use outer variables
+5. **Module Scope** → variables confined within a module
+
+---
+
+👉 Do you want me to also make a **diagram-style explanation** (like a scope chain visualization) so it’s easier to picture how scopes are nested?
+
 ## 🔹 What is **Hoisting** in JavaScript?
 
 Hoisting is **JavaScript’s default behavior** of moving **declarations (not initializations)** to the top of the current scope (global or function scope) **before execution**.
