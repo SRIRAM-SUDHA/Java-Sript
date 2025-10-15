@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>getBoundingClientRect Demo</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      height: 200vh; /* make page scrollable */
+    }
+    #navbar {
+      width: 100%;
+      padding: 15px;
+      background: lightcoral;
+      color: white;
+      text-align: center;
+      font-weight: bold;
+    }
+    .fixed {
+      position: fixed;
+      top: 0;
+      left: 0;
+    }
+    #box {
+      width: 150px;
+      height: 100px;
+      background: lightblue;
+      margin: 200px auto;
+      text-align: center;
+      line-height: 100px;
+      font-weight: bold;
+    }
+    #tooltip {
+      display: none;
+      background: black;
+      color: white;
+      padding: 5px 8px;
+      border-radius: 5px;
+      font-size: 14px;
+    }
+  </style>
+</head>
+<body>
+  <div id="navbar">Navbar</div>
+
+  <div id="box">BOX</div>
+  <div id="tooltip">I’m a tooltip!</div>
+
+  <script>
+    const box = document.getElementById("box");
+    const navbar = document.getElementById("navbar");
+    const tooltip = document.getElementById("tooltip");
+
+    // 1. Log size and position of box
+    console.log("Initial Box Rect:", box.getBoundingClientRect());
+
+    // 2. Check if box is visible in viewport
+    function isInViewport(el) {
+      const rect = el.getBoundingClientRect();
+      return (
+        rect.top >= 0 &&
+        rect.left >= 0 &&
+        rect.bottom <= window.innerHeight &&
+        rect.right <= window.innerWidth
+      );
+    }
+
+    window.addEventListener("scroll", () => {
+      // Change box color when visible
+      if (isInViewport(box)) {
+        box.style.background = "lightgreen";
+      } else {
+        box.style.background = "lightblue";
+      }
+
+      // 3. Sticky navbar
+      const rect = navbar.getBoundingClientRect();
+      if (rect.top <= 0) {
+        navbar.classList.add("fixed");
+      } else {
+        navbar.classList.remove("fixed");
+      }
+    });
+
+    // 4. Tooltip positioning
+    box.addEventListener("mouseenter", () => {
+      const rect = box.getBoundingClientRect();
+      tooltip.style.display = "block";
+      tooltip.style.position = "absolute";
+      tooltip.style.top = rect.bottom + "px"; // below box
+      tooltip.style.left = rect.left + "px";  // align left
+    });
+
+    box.addEventListener("mouseleave", () => {
+      tooltip.style.display = "none";
+    });
+
+    // 5. Show difference between viewport vs page position
+    window.addEventListener("scroll", () => {
+      const rect = box.getBoundingClientRect();
+      console.log("Viewport top:", rect.top, "Page top:", rect.top + window.scrollY);
+    });
+  </script>
+</body>
+</html>

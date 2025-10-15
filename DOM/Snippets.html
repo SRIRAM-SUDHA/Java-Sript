@@ -1,0 +1,492 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>DOM Playground — Interactive Snippets</title>
+  <style>
+    :root {
+      --accent: #0ea5a4;
+      --muted: #666;
+      --bg: #f7f7fb;
+      --card: #fff
+    }
+
+    html,
+    body {
+      height: 100%;
+      margin: 0;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial
+    }
+
+    body {
+      background: var(--bg);
+      color: #111;
+      padding: 24px
+    }
+
+    h1 {
+      margin: 0 0 12px;
+      font-weight: 700
+    }
+
+    .wrap {
+      display: grid;
+      grid-template-columns: 1fr 420px;
+      gap: 20px;
+      align-items: start
+    }
+
+    .panel {
+      background: var(--card);
+      padding: 14px;
+      border-radius: 10px;
+      box-shadow: 0 6px 18px rgba(10, 10, 20, .06)
+    }
+
+    .panel h2 {
+      font-size: 16px;
+      margin: 0 0 8px
+    }
+
+    .buttons {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap
+    }
+
+    .btn {
+      padding: 8px 12px;
+      border-radius: 8px;
+      border: 1px solid #e6e6ee;
+      background: #fff;
+      cursor: pointer
+    }
+
+    .btn.active {
+      background: var(--accent);
+      color: #fff;
+      border-color: transparent
+    }
+
+    .hidden {
+      display: none
+    }
+
+    .card {
+      padding: 12px;
+      border-radius: 8px;
+      border: 1px dashed #eee;
+      margin-bottom: 8px
+    }
+
+    .menu a {
+      display: inline-block;
+      padding: 6px 10px;
+      border-radius: 6px;
+      text-decoration: none;
+      color: var(--muted)
+    }
+
+    .menu a.active {
+      background: #e7f7f6;
+      color: var(--accent);
+      font-weight: 600
+    }
+
+    ul {
+      padding-left: 20px
+    }
+
+    li {
+      cursor: pointer;
+      padding: 6px;
+      border-radius: 6px
+    }
+
+    li:hover {
+      background: #f1f6f6
+    }
+
+    li.selected {
+      background: gold
+    }
+
+    .tabs {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 10px
+    }
+
+    .tab {
+      padding: 8px 12px;
+      border-radius: 8px;
+      border: 1px solid #eef
+    }
+
+    .tab.active {
+      background: var(--accent);
+      color: #fff
+    }
+
+    .content {
+      display: none;
+      padding: 10px;
+      border-radius: 8px;
+      border: 1px solid #eee
+    }
+
+    .content.active {
+      display: block
+    }
+
+    .box {
+      width: 80px;
+      height: 80px;
+      border-radius: 8px;
+      display: inline-grid;
+      place-items: center;
+      background: #fff;
+      margin: 6px;
+      border: 1px solid #eee
+    }
+
+    .box.pop {
+      transform: scale(1.12);
+      transition: transform .18s ease
+    }
+
+    .fade-box {
+      opacity: 0;
+      animation: fadeIn .45s ease forwards
+    }
+
+    @keyframes fadeIn {
+      to {
+        opacity: 1
+      }
+    }
+
+    .color-box {
+      width: 50px;
+      height: 30px;
+      border-radius: 6px;
+      display: inline-block;
+      margin: 4px;
+      border: 1px solid #ddd;
+      cursor: pointer
+    }
+
+    .right .panel {
+      position: sticky;
+      top: 24px
+    }
+
+    footer {
+      margin-top: 22px;
+      color: var(--muted);
+      font-size: 13px
+    }
+
+    /* simple responsive */
+    @media (max-width:980px) {
+      .wrap {
+        grid-template-columns: 1fr
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <h1>DOM Playground — Interactive Snippets</h1>
+  <p style="color:var(--muted);margin-top:6px;margin-bottom:18px">Click examples on the left. The right column contains
+    utilities and live controls.</p>
+
+  <div class="wrap">
+    <div>
+      <!-- Active Button List -->
+      <section class="panel">
+        <h2>1. Active Buttons (select one)</h2>
+        <div class="buttons" id="btnList">
+          <button class="btn">Home</button>
+          <button class="btn">About</button>
+          <button class="btn">Contact</button>
+          <button class="btn">Blog</button>
+        </div>
+      </section>
+
+      <!-- Toggle visibility -->
+      <section class="panel" style="margin-top:12px">
+        <h2>2. Toggle Show/Hide</h2>
+        <button class="btn" id="toggleBtn">Show / Hide</button>
+        <div id="toggleContent" class="card hidden" style="margin-top:10px">This content toggles visibility using
+          <code>classList.toggle</code>.</div>
+      </section>
+
+      <!-- Filter list -->
+      <section class="panel" style="margin-top:12px">
+        <h2>3. Live Filter</h2>
+        <input placeholder="Search fruits..." id="search"
+          style="padding:8px;border-radius:8px;border:1px solid #eee;width:100%" />
+        <ul id="fruitList" style="margin-top:8px">
+          <li>Apple</li>
+          <li>Banana</li>
+          <li>Cherry</li>
+          <li>Orange</li>
+          <li>Grape</li>
+          <li>Mango</li>
+        </ul>
+      </section>
+
+      <!-- Tabs -->
+      <section class="panel" style="margin-top:12px">
+        <h2>4. Tabs (switch content)</h2>
+        <div class="tabs" id="tabs">
+          <button class="tab active">Tab 1</button>
+          <button class="tab">Tab 2</button>
+          <button class="tab">Tab 3</button>
+        </div>
+        <div class="content active">This is content for Tab 1.</div>
+        <div class="content">This is content for Tab 2.</div>
+        <div class="content">This is content for Tab 3.</div>
+      </section>
+
+      <!-- Template + Fragment -->
+      <section class="panel" style="margin-top:12px">
+        <h2>5. Template + DocumentFragment (generate cards)</h2>
+        <button class="btn" id="renderCards">Render 5 Cards</button>
+        <div id="cardsArea" style="margin-top:10px"></div>
+
+        <template id="cardTemplate">
+          <div class="card">
+            <h3 class="title">Title</h3>
+            <p class="desc">Description</p>
+          </div>
+        </template>
+      </section>
+
+      <!-- Select all checkboxes -->
+      <section class="panel" style="margin-top:12px">
+        <h2>6. Select / Unselect All</h2>
+        <label><input type="checkbox" id="selectAll"> Select All</label>
+        <div style="margin-top:8px">
+          <label><input type="checkbox" class="item"> Item A</label><br>
+          <label><input type="checkbox" class="item"> Item B</label><br>
+          <label><input type="checkbox" class="item"> Item C</label>
+        </div>
+      </section>
+
+      <!-- Boxes and animation -->
+      <section class="panel" style="margin-top:12px">
+        <h2>7. Boxes — hover & click effects</h2>
+        <div>
+          <div class="box">1</div>
+          <div class="box">2</div>
+          <div class="box">3</div>
+        </div>
+        <p style="margin-top:8px;color:var(--muted);font-size:13px">Click a box to toggle <code>.pop</code></p>
+      </section>
+
+      <!-- Select list item highlight -->
+      <section class="panel" style="margin-top:12px">
+        <h2>8. Highlight one list item</h2>
+        <ul id="selectable">
+          <li>Option 1</li>
+          <li>Option 2</li>
+          <li>Option 3</li>
+        </ul>
+      </section>
+
+      <!-- Color boxes -->
+      <section class="panel" style="margin-top:12px">
+        <h2>9. Random color box</h2>
+        <div id="colorBoxes">
+          <div class="color-box" title="click me"></div>
+          <div class="color-box" title="click me"></div>
+          <div class="color-box" title="click me"></div>
+        </div>
+      </section>
+
+      <!-- Fragment animation insert -->
+      <section class="panel" style="margin-top:12px">
+        <h2>10. Batch insert with DocumentFragment + animation</h2>
+        <button class="btn" id="insertMany">Insert 6 boxes</button>
+        <div id="fragArea" style="margin-top:8px"></div>
+      </section>
+
+    </div>
+
+    <aside class="right">
+      <div class="panel">
+        <h2>Utilities & Live Controls</h2>
+        <div style="margin-bottom:8px">
+          <label>Theme color: <input id="colorPicker" type="color" value="#0ea5a4"></label>
+        </div>
+        <div style="margin-bottom:8px">
+          <button class="btn" id="darkToggle">Toggle Dark Mode</button>
+        </div>
+        <div style="margin-bottom:6px">
+          <h3 style="margin:6px 0">Event Delegation Demo (menu)</h3>
+          <nav class="menu">
+            <a href="#home">Home</a>
+            <a href="#services">Services</a>
+            <a href="#about">About</a>
+            <a href="#contact">Contact</a>
+          </nav>
+        </div>
+
+        <div style="margin-top:12px">
+          <h3 style="margin:6px 0">Quick Info</h3>
+          <p style="color:var(--muted);font-size:13px">Open the console to see logs from a few examples (render time,
+            actions).</p>
+        </div>
+      </div>
+
+      <div class="panel" style="margin-top:12px">
+        <h2>Small Playground</h2>
+        <p class="card">Try searching, toggles, rendering cards, and view how classes are toggled visually.</p>
+      </div>
+    </aside>
+  </div>
+
+  <footer>Made for practice — interactive DOM snippets. Edit freely.</footer>
+
+  <script>
+    // 1. Active Buttons
+    (function () {
+      const btns = document.querySelectorAll('#btnList .btn');
+      btns.forEach(btn => {
+        btn.addEventListener('click', () => {
+          btns.forEach(b => b.classList.remove('active'));
+          btn.classList.add('active');
+        });
+      });
+    })();
+
+    // 2. Toggle visibility
+    document.getElementById('toggleBtn').addEventListener('click', () => {
+      document.getElementById('toggleContent').classList.toggle('hidden');
+    });
+
+    // 3. Live filter
+    document.getElementById('search').addEventListener('input', (e) => {
+      const q = e.target.value.toLowerCase();
+      document.querySelectorAll('#fruitList li').forEach(li => {
+        li.style.display = li.textContent.toLowerCase().includes(q) ? 'list-item' : 'none';
+      });
+    });
+
+    // 4. Tabs
+    (function () {
+      const tabs = document.querySelectorAll('#tabs .tab');
+      const contents = document.querySelectorAll('.content');
+      tabs.forEach((tab, i) => {
+        tab.addEventListener('click', () => {
+          tabs.forEach(t => t.classList.remove('active'));
+          contents.forEach(c => c.classList.remove('active'));
+          tab.classList.add('active');
+          contents[i].classList.add('active');
+        });
+      });
+    })();
+
+    // 5. Template + Fragment
+    document.getElementById('renderCards').addEventListener('click', () => {
+      const tpl = document.getElementById('cardTemplate');
+      const frag = document.createDocumentFragment();
+      const data = ['Alpha', 'Beta', 'Gamma', 'Delta', 'Epsilon'];
+      console.time('renderCards');
+      data.forEach((text, idx) => {
+        const clone = tpl.content.cloneNode(true);
+        clone.querySelector('.title').textContent = text;
+        clone.querySelector('.desc').textContent = `This is card #${idx + 1}`;
+        frag.appendChild(clone);
+      });
+      document.getElementById('cardsArea').appendChild(frag);
+      console.timeEnd('renderCards');
+    });
+
+    // 6. Select all checkboxes
+    (function () {
+      const selectAll = document.getElementById('selectAll');
+      const items = document.querySelectorAll('.item');
+      selectAll.addEventListener('change', () => {
+        items.forEach(i => i.checked = selectAll.checked);
+      });
+    })();
+
+    // 7. Boxes: click to pop
+    document.querySelectorAll('.box').forEach(b => {
+      b.addEventListener('click', () => b.classList.toggle('pop'));
+    });
+
+    // 8. Highlight list item (single selection)
+    (function () {
+      const lis = document.querySelectorAll('#selectable li');
+      lis.forEach(li => {
+        li.addEventListener('click', () => {
+          lis.forEach(l => l.classList.remove('selected'));
+          li.classList.add('selected');
+        });
+      });
+    })();
+
+    // 9. Random color boxes
+    document.querySelectorAll('.color-box').forEach(box => {
+      box.addEventListener('click', () => {
+        const color = `hsl(${Math.random() * 360},70%,60%)`;
+        box.style.background = color;
+      });
+    });
+
+    // 10. DocumentFragment animation insert
+    document.getElementById('insertMany').addEventListener('click', () => {
+      const frag = document.createDocumentFragment();
+      for (let i = 1; i <= 6; i++) {
+        const d = document.createElement('div');
+        d.className = 'box fade-box';
+        d.textContent = `B${i}`;
+        frag.appendChild(d);
+      }
+      document.getElementById('fragArea').appendChild(frag);
+    });
+
+    // Utilities: theme color
+    const root = document.documentElement;
+    document.getElementById('colorPicker').addEventListener('input', (e) => {
+      root.style.setProperty('--accent', e.target.value);
+    });
+
+    // Dark toggle
+    document.getElementById('darkToggle').addEventListener('click', () => {
+      document.body.classList.toggle('dark-mode');
+      if (document.body.classList.contains('dark-mode')) {
+        root.style.setProperty('--bg', '#0f1724');
+        root.style.setProperty('--card', '#071025');
+        root.style.setProperty('--muted', '#9aa7b2');
+        root.style.setProperty('--accent', '#60a5fa');
+        document.body.style.color = '#e6eef8';
+      } else {
+        root.style.setProperty('--bg', '#f7f7fb');
+        root.style.setProperty('--card', '#fff');
+        root.style.setProperty('--muted', '#666');
+        root.style.setProperty('--accent', '#0ea5a4');
+        document.body.style.color = '#111';
+      }
+    });
+
+    // Event delegation for menu
+    document.querySelector('.menu').addEventListener('click', (e) => {
+      if (e.target.matches('a')) {
+        document.querySelectorAll('.menu a').forEach(a => a.classList.remove('active'));
+        e.target.classList.add('active');
+      }
+    });
+
+    // small console hint
+    console.log('DOM Playground ready — try the examples.');
+  </script>
+</body>
+
+</html>

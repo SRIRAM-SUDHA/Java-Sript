@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Interactive Widgets Playground</title>
+  <style>
+    body {
+      font-family: 'Poppins', sans-serif;
+      padding: 30px;
+      background: #f9fafb;
+      color: #333;
+    }
+
+    section {
+      margin-bottom: 40px;
+      padding: 20px;
+      background: white;
+      border-radius: 10px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    }
+
+    button {
+      margin: 5px;
+      padding: 8px 16px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      background: #007bff;
+      color: white;
+      transition: background 0.3s;
+    }
+
+    button:hover {
+      background: #0056b3;
+    }
+
+    .progress-container {
+      width: 300px;
+      height: 20px;
+      background: #ddd;
+      border-radius: 10px;
+      overflow: hidden;
+      margin: 10px 0;
+    }
+
+    #progress {
+      height: 100%;
+      background: linear-gradient(90deg, #00b4db, #0083b0);
+      transition: width 0.3s ease;
+    }
+
+    #stars {
+      font-size: 30px;
+      cursor: pointer;
+      color: #ccc;
+    }
+
+    .star.active {
+      color: gold;
+    }
+
+    #likeBtn {
+      font-size: 18px;
+      transition: transform 0.2s;
+    }
+
+    #likeBtn.liked {
+      color: red;
+      transform: scale(1.2);
+    }
+
+    svg {
+      display: block;
+      margin-top: 10px;
+    }
+
+    .stat {
+      font-size: 24px;
+      font-weight: bold;
+      margin: 10px 0;
+    }
+  </style>
+</head>
+
+<body>
+  <h1>🧩 Interactive Widgets Playground</h1>
+
+  <section>
+    <h2>🕒 Start / Stop Timer</h2>
+    <h2 id="time">0</h2>
+    <button id="start">Start</button>
+    <button id="stop">Stop</button>
+    <button id="reset">Reset</button>
+  </section>
+
+  <section>
+    <h2>⏳ Progress Bar</h2>
+    <div class="progress-container">
+      <div id="progress"></div>
+    </div>
+    <button id="fill">Fill Progress</button>
+  </section>
+
+  <section>
+    <h2>⭐ Star Rating</h2>
+    <div id="stars">★★★★★</div>
+    <p id="ratingText">Rating: 0 / 5</p>
+  </section>
+
+  <section>
+    <h2>🔢 Counter</h2>
+    <h2 id="count">0</h2>
+    <button id="increase">+</button>
+    <button id="decrease">-</button>
+  </section>
+
+  <section>
+    <h2>🕰️ Countdown Timer</h2>
+    <div id="countdown">10</div>
+    <button id="startCountdown">Start Countdown</button>
+  </section>
+
+  <section>
+    <h2>🎯 Circular Progress</h2>
+    <svg width="100" height="100">
+      <circle cx="50" cy="50" r="40" stroke="#ddd" stroke-width="8" fill="none" />
+      <circle id="circleProgress" cx="50" cy="50" r="40" stroke="#00b4db" stroke-width="8" fill="none"
+        stroke-dasharray="251" stroke-dashoffset="251" />
+    </svg>
+    <button id="circleFill">Animate</button>
+  </section>
+
+  <section>
+    <h2>❤️ Like Button</h2>
+    <button id="likeBtn">♡ Like</button>
+  </section>
+
+  <section>
+    <h2>🎮 Typing Effect</h2>
+    <h2 id="typing"></h2>
+  </section>
+
+  <section>
+    <h2>💥 Auto Counter (Scroll Reveal)</h2>
+    <div class="stat" data-target="1200">0</div>
+    <div class="stat" data-target="980">0</div>
+    <div class="stat" data-target="3000">0</div>
+  </section>
+
+  <script>
+    // Timer
+    let timer, count = 0;
+    const display = document.getElementById('time');
+    document.getElementById('start').onclick = () => {
+      if (!timer) timer = setInterval(() => display.textContent = ++count, 1000);
+    };
+    document.getElementById('stop').onclick = () => { clearInterval(timer); timer = null; };
+    document.getElementById('reset').onclick = () => { clearInterval(timer); timer = null; count = 0; display.textContent = 0; };
+
+    // Progress Bar
+    document.getElementById('fill').onclick = () => {
+      let progress = 0;
+      const bar = document.getElementById('progress');
+      const interval = setInterval(() => {
+        progress += 5;
+        bar.style.width = progress + '%';
+        if (progress >= 100) clearInterval(interval);
+      }, 100);
+    };
+
+    // Star Rating
+    const starsContainer = document.getElementById('stars');
+    const ratingText = document.getElementById('ratingText');
+    starsContainer.innerHTML = '★★★★★'.split('').map(() => '<span class="star">★</span>').join('');
+    const stars = document.querySelectorAll('.star');
+    stars.forEach((star, i) => {
+      star.addEventListener('click', () => {
+        stars.forEach((s, j) => s.classList.toggle('active', j <= i));
+        ratingText.textContent = `Rating: ${i + 1} / 5`;
+      });
+    });
+
+    // Counter
+    let value = 0;
+    const countEl = document.getElementById('count');
+    const update = () => countEl.textContent = value;
+    document.getElementById('increase').onclick = () => { value++; update(); };
+    document.getElementById('decrease').onclick = () => { if (value > 0) value--; update(); };
+
+    // Countdown
+    document.getElementById('startCountdown').onclick = () => {
+      let time = 10;
+      const cd = document.getElementById('countdown');
+      const interval = setInterval(() => {
+        cd.textContent = time--;
+        if (time < 0) { clearInterval(interval); cd.textContent = "Time's up!"; }
+      }, 1000);
+    };
+
+    // Circle Progress
+    document.getElementById('circleFill').onclick = () => {
+      const circle = document.getElementById('circleProgress');
+      let offset = 251;
+      const interval = setInterval(() => {
+        offset -= 10;
+        circle.style.strokeDashoffset = offset;
+        if (offset <= 0) clearInterval(interval);
+      }, 100);
+    };
+
+    // Like Button
+    const likeBtn = document.getElementById('likeBtn');
+    likeBtn.onclick = () => {
+      likeBtn.classList.toggle('liked');
+      likeBtn.textContent = likeBtn.classList.contains('liked') ? '❤️ Liked' : '♡ Like';
+    };
+
+    // Typing Effect
+    const text = 'Welcome to the Interactive DOM Playground!';
+    let i = 0;
+    const typing = document.getElementById('typing');
+    (function type() {
+      if (i < text.length) {
+        typing.textContent += text.at(i++);
+        setTimeout(type, 100);
+      }
+    })();
+
+    // Auto Counter on Scroll
+    const stats = document.querySelectorAll('.stat');
+    const observer = new IntersectionObserver(entries => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          const el = entry.target;
+          const target = +el.dataset.target;
+          let count = 0;
+          const interval = setInterval(() => {
+            count += Math.ceil(target / 100);
+            el.textContent = count;
+            if (count >= target) { el.textContent = target; clearInterval(interval); }
+          }, 30);
+          observer.unobserve(el);
+        }
+      });
+    });
+    stats.forEach(stat => observer.observe(stat));
+  </script>
+</body>
+
+</html>

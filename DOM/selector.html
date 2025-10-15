@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8" />
+		<title>DOM Selectors Demo</title>
+		<style>
+			body {
+				font-family: Arial, sans-serif;
+				padding: 20px;
+			}
+			table {
+				border-collapse: collapse;
+				width: 100%;
+				margin-top: 20px;
+			}
+			th,
+			td {
+				border: 1px solid #ccc;
+				padding: 8px;
+				text-align: center;
+			}
+			.highlight {
+				background: lightyellow;
+			}
+			.dynamic {
+				background: lightgreen;
+			}
+			.buttons {
+				margin-top: 20px;
+			}
+		</style>
+	</head>
+	<body>
+		<h2>DOM Selectors Demo</h2>
+
+		<ul id="myList">
+			<li class="item">Item 1</li>
+			<li class="item">Item 2</li>
+			<li class="item">Item 3</li>
+		</ul>
+
+		<div class="buttons">
+			<button onclick="addItem()">Add New Item</button>
+			<button onclick="testSelectors()">Test Selectors</button>
+		</div>
+
+		<table>
+			<thead>
+				<tr>
+					<th>Selector</th>
+					<th>Method</th>
+					<th>Result (Live or Static)</th>
+				</tr>
+			</thead>
+			<tbody>
+				<tr>
+					<td>By ID</td>
+					<td><code>getElementById('myList')</code></td>
+					<td id="idResult"></td>
+				</tr>
+				<tr>
+					<td>By Class</td>
+					<td><code>getElementsByClassName('item')</code></td>
+					<td id="classResult"></td>
+				</tr>
+				<tr>
+					<td>By Tag</td>
+					<td><code>getElementsByTagName('li')</code></td>
+					<td id="tagResult"></td>
+				</tr>
+				<tr>
+					<td>Query Selector (first match)</td>
+					<td><code>querySelector('.item')</code></td>
+					<td id="qsResult"></td>
+				</tr>
+				<tr>
+					<td>Query Selector All (all matches)</td>
+					<td><code>querySelectorAll('.item')</code></td>
+					<td id="qsaResult"></td>
+				</tr>
+			</tbody>
+		</table>
+
+		<script>
+			function addItem() {
+				const li = document.createElement("li");
+				li.textContent =
+					"New Item " + (document.querySelectorAll(".item").length + 1);
+				li.className = "item dynamic";
+				document.getElementById("myList").appendChild(li);
+			}
+
+			function testSelectors() {
+				// ID
+				const byId = document.getElementById("myList");
+				document.getElementById("idResult").textContent =
+					"Found UL with " + byId.children.length + " items";
+
+				// Class (HTMLCollection - Live)
+				const byClass = document.getElementsByClassName("item");
+				document.getElementById("classResult").textContent =
+					byClass.length + " items (LIVE)";
+
+				// Tag (HTMLCollection - Live)
+				const byTag = document.getElementsByTagName("li");
+				document.getElementById("tagResult").textContent =
+					byTag.length + " items (LIVE)";
+
+				// Query Selector (first match - Static element)
+				const byQS = document.querySelector(".item");
+				document.getElementById("qsResult").textContent =
+					"First item = " + byQS.textContent;
+
+				// Query Selector All (NodeList - Static)
+				const byQSA = document.querySelectorAll(".item");
+				document.getElementById("qsaResult").textContent =
+					byQSA.length + " items (STATIC)";
+			}
+		</script>
+	</body>
+</html>

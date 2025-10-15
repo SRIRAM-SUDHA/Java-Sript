@@ -68,8 +68,18 @@ let multiplyByTwoA = multiplyA(2);
 multiplyByTwoA(5); // 10
 
 // ---------------------------
-// JavaScript Promises
 
-// const p1 = new Promise((res, rej) => {
-// 	res("P1 sucess");
-// });
+function sum(...args1) {
+	let total = args1.reduce((a, b) => a + b, 0);
+
+	function inner(...args2) {
+		return sum(total, ...args2);
+	}
+	inner.valueOf = () => total;
+	return inner;
+}
+
+console.log(+sum(2)(4)(6)); // 12
+console.log(+sum(3, 2)(5)); // 10
+console.log(+sum(4)(-10, -6)); // -12
+console.log(+sum(6, -3, 1)); // 4
