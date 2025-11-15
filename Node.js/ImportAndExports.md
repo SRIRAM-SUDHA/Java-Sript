@@ -8,6 +8,8 @@ Got it 👍 Let’s go step by step and write **clear documentation** on **Commo
 
 ---
 
+#[IMPORT and EXPORTS](https://javascript.info/import-export)
+
 # 📦 JavaScript Modules
 
 Modules let you split your code into separate files and **reuse/import** them.
