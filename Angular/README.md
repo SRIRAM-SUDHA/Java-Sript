@@ -192,12 +192,12 @@ _(You likely know most of this, but Angular is strict)_
 
 ---
 
-### 18. Signals (Modern Angular)
+### 18. NgZone & Manual Change Detection (Angular 14)
 
-- Signals vs Observables
-- When to use signals
-- Interop with RxJS
-- Future Angular direction
+- What `zone.js` does (high level)
+- When to use `ChangeDetectorRef` (`markForCheck`, `detectChanges`)
+- `runOutsideAngular` for high-frequency events (advanced)
+- Practical performance checklist (trackBy, OnPush, async pipe)
 
 ---
 

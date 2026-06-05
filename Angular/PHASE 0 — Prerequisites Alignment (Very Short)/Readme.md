@@ -1,272 +1,224 @@
-# PHASE 0 — Prerequisites Alignment (Angular-Ready)
+# PHASE 0 - Prerequisites Alignment (Angular-Ready)
 
 This phase answers one question only:
 
-> “Why does Angular code look the way it does?”
+> "Why does Angular code look the way it does?"
 
 ---
 
-## 1. TypeScript — How Angular _Actually_ Uses It
+## 1) TypeScript - How Angular Actually Uses It
 
-Angular does **not** use TypeScript as “typed JavaScript”.
-It uses TypeScript as a **design and metadata language**.
+Angular does not use TypeScript as "typed JavaScript".
+It uses TypeScript as a **design + metadata** language.
 
-### 1.1 Classes (Not Optional in Angular)
-
-In React, classes are legacy.
-In Angular, **classes are the foundation**.
+### 1.1 Classes (Not Optional in Angular) 🧠
+In React, classes are legacy. In Angular, **classes are the foundation**.
 
 ```ts
 export class UserComponent {
-	name: string = "Sri";
+  name: string = 'Sri';
 }
 ```
 
 Why classes matter:
+- ✅ DI relies on class constructors
+- ✅ Decorators attach metadata to classes
+- ✅ Lifecycle hooks are class methods
 
-- DI relies on class constructors
-- Decorators attach metadata to classes
-- Lifecycle hooks are class methods
-
-**Angular thinking:**
-
+Angular thinking:
 > A component is an object with a lifecycle, not a function.
 
 ---
 
-### 1.2 Access Modifiers (Very Important)
-
-Angular uses access modifiers **intentionally**, not stylistically.
+### 1.2 Access Modifiers (Very Important) 🔐
+Angular uses access modifiers intentionally:
 
 ```ts
 export class UserComponent {
-	public title = "Users";
-	private cache = new Map();
-	protected config = {};
+  public title = 'Users';
+  private cache = new Map();
+  protected config = {};
 }
 ```
 
-How Angular treats them:
-
-- `public` → accessible in template
-- `private` → **NOT accessible in template**
-- `protected` → subclass only
+Template visibility:
+- `public` -> accessible in template
+- `private` -> not accessible in template
+- `protected` -> not accessible in template (template is not a subclass)
 
 ```html
-<!-- This works -->
+<!-- ✅ Works -->
 <h1>{{ title }}</h1>
 
-<!-- This FAILS -->
+<!-- ❌ Fails -->
 {{ cache }}
 ```
 
-**Rule you must remember:**
-👉 If the template needs it, it must be `public`.
+Rule:
+> 👉 If the template needs it, it must be `public`.
 
 ---
 
-### 1.3 Generics (Angular Uses Them Everywhere)
-
-You already know generics, but Angular uses them aggressively.
+### 1.3 Generics (Angular Uses Them Everywhere) 🧰
+Angular APIs use generics heavily:
 
 ```ts
-http.get<User[]>("/api/users");
+http.get<User[]>('/api/users');
 ```
 
-Why this matters:
-
-- Strongly typed APIs
-- Compile-time template safety
-- Better refactoring
-
-This is **not optional typing** — Angular expects it.
+Why it matters:
+- better refactoring
+- safer API usage
+- clearer contracts
 
 ---
 
-## 2. ES Decorators — Angular’s Backbone
+## 2) ES Decorators - Angular's Backbone 🧩
 
-Decorators are **not syntax sugar** in Angular.
-They are **instructions to the Angular compiler**.
-
----
+Decorators are not just syntax sugar in Angular.
+They are compiler-visible metadata.
 
 ### 2.1 What a Decorator Really Is
-
 ```ts
 @Component({
-	selector: "app-user",
-	templateUrl: "./user.component.html",
+  selector: 'app-user',
+  templateUrl: './user.component.html',
 })
 export class UserComponent {}
 ```
 
-Think of it as:
-
-> “Attach metadata to this class so Angular knows how to use it.”
-
-Angular **reads decorators at compile time**, not runtime.
+Mental model:
+> "Attach metadata to this class so Angular knows how to compile and use it."
 
 ---
 
 ### 2.2 `@Component`
-
 Defines:
-
-- How the class becomes UI
-- How it connects to HTML
-- How change detection works
-
-Without `@Component`, the class is meaningless to Angular.
+- how the class becomes UI
+- how it connects to template/styles
+- how it participates in change detection
 
 ---
 
-### 2.3 `@Injectable`
-
+### 2.3 `@Injectable` (Services)
 ```ts
-@Injectable({ providedIn: "root" })
+@Injectable({ providedIn: 'root' })
 export class AuthService {}
 ```
 
 This tells Angular:
+- this class can be injected
+- its lifetime is managed by DI
+- its scope is defined (`root`, module providers, component providers, etc.)
 
-- This class can be injected
-- Its lifetime is managed by DI
-- Where it should live (root, feature, etc.)
-
-**Important:**
-You do **not** instantiate services yourself.
-
+Important:
 ```ts
 // ❌ Never do this
 const auth = new AuthService();
 
-// ✅ Angular does this
-constructor(private auth: AuthService) {}
+// ✅ Angular does this (via DI)
+constructor(private readonly auth: AuthService) {}
 ```
 
 ---
 
-### 2.4 Decorators vs React
+### 2.4 Decorators vs React (quick comparison)
+| React | Angular |
+|------|---------|
+| Mostly functions | Decorated classes |
+| Runtime composition | Compiler-visible metadata |
+| Manual wiring | Declarative configuration |
 
-| React                  | Angular                   |
-| ---------------------- | ------------------------- |
-| Functions              | Decorated classes         |
-| Runtime interpretation | Compile-time metadata     |
-| Manual wiring          | Declarative configuration |
-
-**Angular mindset:**
-
-> “Describe intent, let the framework execute.”
+Angular mindset:
+> "Describe intent, let the framework execute."
 
 ---
 
-## 3. RxJS Mental Model (This Is the Biggest Shift)
+## 3) RxJS Mental Model (Biggest Shift) 🌊
 
-This is where most React devs struggle.
+Angular leans heavily on RxJS:
+- HTTP (`HttpClient`)
+- Router params/events
+- Forms `valueChanges`
+- Many libraries and UI patterns
 
-Angular is built on **RxJS**.
+### 3.1 Promise vs Observable (correct mental model)
+Promise:
+- one value
+- eager (starts immediately)
+- not cancelable
 
----
-
-### 3.1 Promise vs Observable (Correct Mental Model)
-
-#### Promise
-
-- One value
-- Executes immediately
-- Cannot be cancelled
+Observable:
+- 0..N values over time
+- lazy (does nothing until subscribed)
+- cancelable (unsubscribe)
+- composable (operators)
 
 ```ts
-fetch('/api').then(...)
+this.http.get('/api'); // nothing happens until subscribed
 ```
 
-#### Observable
-
-- Multiple values over time
-- Lazy (does nothing until subscribed)
-- Can be cancelled
-- Composable
-
-```ts
-this.http.get("/api"); // nothing happens yet
-```
-
-**Angular rule:**
-👉 HTTP, events, routing, forms → all Observables.
+Rule of thumb:
+> 👉 HTTP, routing, forms, events -> think Observables.
 
 ---
 
-### 3.2 Observable as a Stream (Key Insight)
-
-Think of an Observable as:
-
-> “A pipeline where data flows over time”
-
+### 3.2 `async` pipe = subscription management ✅
 ```ts
-user$ = this.http.get<User>("/api/user");
+user$ = this.http.get<User>('/api/user');
 ```
 
-In template:
-
+Template:
 ```html
-<div>{{ user$ | async }}</div>
+<div>{{ user$ | async | json }}</div>
 ```
 
 What happens:
-
-1. Template subscribes automatically
-2. Angular updates UI when value arrives
-3. Angular unsubscribes automatically
-
-No `useEffect`. No cleanup code.
+1. Angular subscribes for you
+2. UI updates when values arrive
+3. Angular unsubscribes automatically on destroy
 
 ---
 
-### 3.3 Operators Replace Hooks Logic
-
-React:
-
+### 3.3 Operators replace a lot of "hook logic" 🧠
+React mental model:
 ```js
 useEffect(() => {
-	fetchUser(id);
+  fetchUser(id);
 }, [id]);
 ```
 
-Angular:
-
+Angular mental model (stream composition):
 ```ts
-this.route.params.pipe(switchMap((params) => this.api.getUser(params["id"])));
+this.route.paramMap.pipe(
+  map((p) => p.get('id') ?? ''),
+  switchMap((id) => this.api.getUser(id))
+);
 ```
 
-**Mental shift:**
-👉 Stop reacting to events.
-👉 Start transforming streams.
+Shift:
+> 👉 Stop reacting to events with imperative steps. Start transforming streams.
 
 ---
 
-### 3.4 Subjects (When You Need State)
-
+### 3.4 Subjects (when you need state)
 ```ts
-private userSubject = new BehaviorSubject<User | null>(null);
-user$ = this.userSubject.asObservable();
+private readonly userSubject = new BehaviorSubject<User | null>(null);
+readonly user$ = this.userSubject.asObservable();
 ```
 
-This replaces:
-
-- React Context
-- Global stores (in small apps)
-- Prop drilling
+This replaces small-app patterns like:
+- prop drilling
+- ad-hoc global variables
+- overusing context-like patterns
 
 ---
 
-## Phase 0 Summary (Lock This In)
-
-### If you remember only this:
-
-1. Angular is **class-first**
-2. Decorators = compiler instructions
-3. Templates access only `public` members
-4. Observables are **default**, not advanced
+## Phase 0 Summary (Lock This In) ✅
+If you remember only this:
+1. Angular is class-first
+2. Decorators are compiler-visible metadata
+3. Templates can only access public members
+4. Observables are default, not advanced
 5. You describe flows, not steps
 
----
