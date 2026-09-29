@@ -43,6 +43,16 @@ Become productive with Angular's core building blocks (NgModules, components, te
 
 📖 **Plain-English definition**: Angular is a complete "batteries included" toolkit for building web apps — instead of picking a router, a state pattern, and an HTTP client separately (like you might in React), Angular ships all of it together with one opinionated way of wiring things up.
 
+### ⚛️ How This Works in React (Your Mental Anchor)
+React itself is just a rendering library — it has no built-in router, DI system, forms library, or HTTP client. You're used to assembling your own stack: `react-router-dom` for routing, `redux`/`zustand`/Context for state, `axios` for HTTP, `react-hook-form` for forms — and you choose each piece yourself. Angular hands you all of that pre-integrated as one opinionated framework, so the mental shift isn't "learn a new library," it's "you're no longer choosing your own stack — you're learning Angular's pre-made one."
+
+```jsx
+// React: you pick and wire each of these yourself
+import { BrowserRouter } from 'react-router-dom';
+import axios from 'axios';
+import { useForm } from 'react-hook-form';
+```
+
 🧪 **SDET / Test Automation Angle**: Because Angular is opinionated about structure (modules → components → services), the app's architecture itself tells you where to draw your test boundaries. Component-level logic and small UI pieces are cheap to test with `TestBed`/`ComponentFixture` (fast, no browser needed), while cross-cutting concerns like routing, guards, and full page flows are better covered by E2E tools (Playwright/Cypress). Knowing "Angular's way" of doing things means you can predict, just from reading a component's decorator and constructor, whether a behavior belongs in a unit/integration test or needs a full browser-driven E2E test.
 
 ### Why it exists
@@ -124,6 +134,15 @@ This is fundamentally a **Requirements/Design-phase** decision — before a sing
 
 📖 **Plain-English definition**: An NgModule is like a labeled box that groups related components/pipes/directives together and says two things: "here's what's inside this box" (declarations) and "here's what other boxes I'm borrowing from" (imports).
 
+### ⚛️ How This Works in React (Your Mental Anchor)
+Honestly, there isn't a strong React equivalent here — React has no compile-time module/scope system that governs which components are "visible" where; every component is just a plain JS export you import wherever you need it, and nothing checks that at build time. The closest thing is a convention like a barrel `index.ts` that re-exports a folder's components for tidier imports, but that's organizational sugar only, not an enforced boundary — there's no Angular-style compiler error for "this component isn't in your module's scope" because React has no such scope to violate.
+
+```ts
+// React "barrel" file — just a convention, nothing enforces it
+export { Card } from './Card';
+export { Button } from './Button';
+```
+
 🧪 **SDET / Test Automation Angle**: `TestBed.configureTestingModule({...})` mirrors `@NgModule` exactly — the `declarations`/`imports`/`providers` you pass into a test module determine exactly what a component under test can "see" (which child components render for real vs. need stubbing, which pipes resolve, which services get injected). If a test fails with "'app-x' is not a known element" or "the pipe 'y' could not be found," that's the same module-scope resolution failing in your test module as would fail in the real app — a strong signal to check imports/declarations rather than assume a framework bug.
 
 ### Why it exists
@@ -202,6 +221,28 @@ Slicing an app into feature modules is a **Design-phase** call that goes into th
 - Inputs/outputs provide a stable public API for parent/child communication.
 
 📖 **Plain-English definition**: A component is just a small, self-contained piece of UI — its own HTML, its own logic, and its own styles — that you can reuse like a Lego brick.
+
+### ⚛️ How This Works in React (Your Mental Anchor)
+A `@Component` class plus its separate template is structurally like a React class component whose `render()` method returns HTML instead of JSX — except the Angular template is compiled ahead of time into instructions, rather than being JS that literally re-runs on every render. `@Input()`/`@Output()` map directly onto React props: `@Input() user` is just `props.user`, and `@Output() selected = new EventEmitter<string>()` is a callback prop like `props.onSelect(id)` — this one maps cleanly, no hand-waving needed.
+
+```jsx
+// React
+function Counter({ count, onIncrement }) {
+  return <button onClick={onIncrement}>{count}</button>;
+}
+```
+```ts
+// Angular — same shape, template instead of JSX
+@Component({
+  selector: 'app-counter',
+  template: `<button (click)="onIncrement()">{{ count }}</button>`,
+})
+export class CounterComponent {
+  @Input() count!: number;
+  @Output() increment = new EventEmitter<void>();
+  onIncrement(): void { this.increment.emit(); }
+}
+```
 
 🧪 **SDET / Test Automation Angle**: `@Input()`/`@Output()` are the most testable surface in Angular because they're plain properties and event emitters, not DOM details. In a component test, you set `fixture.componentInstance.user = mockUser` and call `component.onSelect()` directly, or spy on the `selected` EventEmitter — no DOM query, no click simulation needed. This is dramatically faster and more deterministic than driving the same interaction through an E2E tool, which has to render the real DOM, wait for it to settle, and simulate a real click. Save full-DOM-driven E2E for verifying the wiring end-to-end, not for exhaustively testing every input/output combination.
 
@@ -291,6 +332,14 @@ Deciding the smart/dumb component split is an **Implementation-phase** decision,
 
 📖 **Plain-English definition**: Data binding is just Angular keeping your HTML in sync with your TypeScript class automatically — you say "show this value here" or "call this method when clicked," and Angular wires the plumbing so you don't have to manually query the DOM and update it yourself.
 
+### ⚛️ How This Works in React (Your Mental Anchor)
+Each binding form maps to something you already write explicitly in JSX: `{{ value }}` interpolation is `{value}`; `[disabled]="isSaving"` property binding is `disabled={isSaving}`; `(click)="save()"` event binding is `onClick={save}`. Two-way binding `[(ngModel)]="name"` is the one worth pausing on — it's Angular collapsing exactly what you write by hand as a controlled input, so nothing is conceptually new, it's just hidden behind syntax.
+
+```jsx
+// React controlled input — this is what [(ngModel)] does for you under the hood
+<input value={name} onChange={(e) => setName(e.target.value)} />
+```
+
 🧪 **SDET / Test Automation Angle**: Because bindings update asynchronously during change detection (not the instant you set a property), a value you just set in a test might not be reflected in the DOM until you call `fixture.detectChanges()` — the same "not-yet-rendered" gap that causes flaky E2E assertions if you check the DOM immediately after an action instead of using `waitFor`/`should('have.text', ...)`. Treat "the DOM hasn't updated yet" as expected async behavior, not a bug, in both unit tests and E2E scripts.
 
 ### Why it exists
@@ -342,6 +391,19 @@ This is mostly an **Implementation/Code-Review** concern — reviewers should ca
 - **Structural directive**: changes DOM layout by adding/removing templates (e.g., `*ngIf`, `*ngFor`).
 
 📖 **Plain-English definition**: An attribute directive tweaks something that's already on the page (like adding a CSS class or auto-focusing a field); a structural directive decides whether something exists on the page at all, or how many times it repeats (like showing/hiding a block, or looping to render a list).
+
+### ⚛️ How This Works in React (Your Mental Anchor)
+`*ngIf="cond"` is the same idea as `{cond && <div>...</div>}` in JSX, and `*ngFor="let x of items"` is `{items.map(x => <li key={x.id}>...</li>)}` — Angular's `trackBy` function solves exactly the problem React's `key` prop solves: telling the framework how to match list items across re-renders instead of destroying and recreating everything. Custom attribute/structural directives, though, have no strong React equivalent — JSX has no separate "directive" concept you attach to an element; the closest analogue is a custom hook that grabs a DOM ref and imperatively manipulates it (e.g., `useRef` + `useEffect` calling `.focus()`), which solves a similar problem through a structurally different mechanism (no reusable "attach this to any element" syntax).
+
+```jsx
+// React equivalent of a custom "autofocus" directive
+function useAutofocus() {
+  const ref = useRef(null);
+  useEffect(() => { ref.current?.focus(); }, []);
+  return ref;
+}
+// usage: <input ref={useAutofocus()} />
+```
 
 🧪 **SDET / Test Automation Angle**: Structural directives are the #1 reason elements "appear/disappear" from the DOM asynchronously — `*ngIf` doesn't hide an element with CSS, it destroys and recreates the actual DOM node (see below), and `*ngFor` re-renders list items as data streams in. This is exactly why Playwright/Cypress selectors should use `waitFor`/`should('exist')` instead of asserting immediately after a trigger — the element genuinely may not exist yet at the moment the test checks. It's also why `data-testid` should always go on the real host element being shown/hidden (e.g., `<div *ngIf="loaded" data-testid="user-card">`) rather than trying to target the structural directive itself — `*ngIf`/`*ngFor` don't render as elements at all; they're compiler sugar with no DOM node of their own.
 
@@ -401,6 +463,14 @@ Directive-vs-component is mostly an **Implementation** call, but the actual risk
 - **Impure pipes** run very frequently (almost every change detection) - use sparingly.
 
 📖 **Plain-English definition**: A pipe is a small, reusable formatter you drop into a template with a `|` symbol — like telling Angular "take this raw value and show it prettified" (a date, a currency amount, a truncated string) without writing that formatting logic by hand every time.
+
+### ⚛️ How This Works in React (Your Mental Anchor)
+A pipe is the same idea as a plain JS formatting function called inline in JSX — `{{ amount | currency }}` is just `{formatCurrency(amount)}`. React has no pipe operator or template syntax for this, so there's nothing hidden to learn here: you just call the function directly (or wrap it in a tiny formatting component) exactly where you'd otherwise write the piped expression.
+
+```jsx
+// React: no pipe syntax — just call the function inline
+<p>{formatCurrency(amount)}</p>
+```
 
 🧪 **SDET / Test Automation Angle**: Impure pipes (e.g., a "time ago" pipe recalculating `Date.now() - timestamp` on every change-detection tick) are a classic source of **non-deterministic** output for visual-regression/DOM-snapshot testing — the same page can render a different string on every test run depending on wall-clock timing. For test fixtures, prefer pure pipes with stable, explicitly-passed inputs, or freeze/mock the clock (e.g., fake timers, or injecting a fixed "now" value) so the impure pipe's output is reproducible across CI runs.
 

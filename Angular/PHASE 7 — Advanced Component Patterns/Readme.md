@@ -29,6 +29,30 @@ Master advanced composition patterns (projection, queries), lifecycle timing, an
 
 📖 **Plain-English definition**: content projection is Angular's way of letting a component say "put whatever HTML the caller hands me, right here" instead of hardcoding every bit of markup itself — like a picture-frame component: you supply the picture, the frame component just wraps it in the right spot.
 
+### ⚛️ How This Works in React (Your Mental Anchor)
+- `<ng-content></ng-content>` ~ `{props.children}` in React — this is nearly a direct 1:1. A component that does `<div class="card"><ng-content></ng-content></div>` is doing exactly what `function Card({ children }) { return <div className="card">{children}</div>; }` does: "render whatever the caller put between my tags."
+- Multi-slot projection (`<ng-content select="[modalTitle]">`) has no single matching React primitive — React doesn't have "named slots" baked into JSX. The idiomatic React equivalent is passing multiple named props that are themselves JSX elements instead of relying on one `children` slot:
+```jsx
+function Modal({ title, children, actions }) {
+  return (
+    <div className="modal">
+      <header className="modal__header">{title}</header>
+      <section className="modal__body">{children}</section>
+      <footer className="modal__footer">{actions}</footer>
+    </div>
+  );
+}
+
+// usage
+<Modal
+  title={<h3>Delete item?</h3>}
+  actions={<><button>Cancel</button><button className="danger">Delete</button></>}
+>
+  <p>This cannot be undone.</p>
+</Modal>;
+```
+- Side-by-side takeaway: Angular's `select="[attr]"` matches on the *shape* of what's passed between the tags (an attribute on a node); React's version just uses more named props instead. Angular's single catch-all `<ng-content>` corresponds to React's one true `children` prop — everything else (`title`, `actions`) is modeled as ordinary extra props rather than extra slots.
+
 🧪 **SDET / Test Automation Angle**: because a projecting component (card, modal, tabs) doesn't own the markup inside its slots, the same `<app-modal>` can render wildly different DOM depending on what's projected into it — one screen might project a `<form>`, another a `<table>`. Automation selectors should never assume a fixed structure "inside" the projecting component (e.g. `.modal > div:nth-child(2) > button`); instead, target stable attributes on the projected content itself, like `data-testid="confirm-delete-btn"` on the button the caller placed there. This also matters for Page Object Models: the modal's "shell" locators (header/body/footer regions) belong to the modal's own object, but the content inside a slot belongs to whatever component/page projected it in.
 
 ### Why it exists ✅
@@ -125,6 +149,32 @@ Content projection decisions mostly surface at **Design** time — when you're d
   - `ElementRef` (last resort)
 
 📖 **Plain-English definition**: `@ViewChild`/`@ContentChild` are how a component reaches out and grabs a handle to a piece of its own template (or to content someone projected into it) — similar in spirit to `document.querySelector`, except Angular decides *when* that handle becomes available based on its own rendering lifecycle, not the moment your code runs.
+
+### ⚛️ How This Works in React (Your Mental Anchor)
+- `@ViewChild` grabbing a raw DOM node ~ React's `useRef()` + the `ref` attribute: `const inputRef = useRef(); <input ref={inputRef} />; inputRef.current.focus();`. Both are "give me an imperative handle to something in my own rendered output, once it exists" — a close, honest mapping.
+- `@ViewChild` grabbing a *child component's* instance (e.g. `this.toast.show()`) maps to React's `forwardRef` + `useImperativeHandle` pattern — the explicit, modern way a React function component exposes an imperative API to its parent:
+```jsx
+const Toast = forwardRef((props, ref) => {
+  const [open, setOpen] = useState(false);
+  useImperativeHandle(ref, () => ({
+    show: () => { setOpen(true); setTimeout(() => setOpen(false), 1500); },
+  }));
+  return open ? <p>Saved!</p> : null;
+});
+
+function SettingsPage() {
+  const toastRef = useRef();
+  return (
+    <>
+      <button onClick={() => toastRef.current.show()}>Save</button>
+      <Toast ref={toastRef} />
+    </>
+  );
+}
+```
+  Both exist for the same reason: "just pass a prop" doesn't cover imperative calls like focus, play, open, or show.
+- `@ContentChild` (reaching into *projected* content to find one specific child) is closer to React's older `React.Children.map` / `React.Children.only` pattern — walking `props.children` to find, inspect, or clone a particular element (e.g. a `<Tabs>` component locating each `<Tab/>` child). It's a real, still-used pattern in some component libraries, but it's considered a bit old-fashioned in modern React, where context or explicit render props are usually preferred over inspecting `children` directly.
+- Lifecycle timing (`static: true`/`false`, `ngAfterViewInit` vs `ngAfterContentInit`) has no real React equivalent worth memorizing — React has no compile-time "static vs dynamic query" split. `useRef`/`useImperativeHandle` values are simply available once the DOM has committed (roughly comparable in spirit to `ngAfterViewInit`), without Angular's separate static-resolution machinery.
 
 🧪 **SDET / Test Automation Angle**: these decorators are usually a sign that something happens **imperatively, outside the normal binding cycle** — an input autofocusing itself, a child component running its own validation, a toast appearing after a delay. For an SDET this is a flag that the element's "ready to interact with" moment may lag behind the DOM simply existing: a test that clicks an input the instant it appears in the DOM can flake if that input's focus/state is still being set via a `@ViewChild` call in `ngAfterViewInit`. When a bug report mentions "works most of the time but occasionally the focus/highlight doesn't happen," check whether a `@ViewChild`/`@ContentChild` timing issue (wrong lifecycle hook, or `static` mismatch) is the root cause before blaming the test.
 
@@ -234,6 +284,12 @@ Communication tools, in order of preference:
 4. **Component-level providers** for scoped state (wizard/page instance)
 
 📖 **Plain-English definition**: this is just "how do two parts of the UI talk to each other" — either directly, like passing a note from parent to child and back (`@Input`/`@Output`), or indirectly, like everyone reading and writing to the same shared whiteboard (a service that holds state).
+
+### ⚛️ How This Works in React (Your Mental Anchor)
+- `@Input()`/`@Output()` ~ props and callback props — the cleanest, most direct mapping in this entire roadmap. `@Input() label: string` is just `<Component label="..." />`; `@Output() saved = new EventEmitter<void>()` is just a callback prop (`<Component onSaved={() => ...} />`). Both are "parent owns the data, child receives it and reports back by calling a function."
+- A shared Angular service (injected into multiple components via DI, holding shared state) ~ a React Context Provider wrapping a subtree (`<MyContext.Provider value={state}>`), or a lightweight external store like Zustand/Redux consumed by multiple components. Both answer the same question: "several components, not in a direct parent-child line, need the same state — where does it live?"
+- "Prop drilling" is the *exact same named problem* in both ecosystems — passing a value down through several intermediate components that don't themselves need it, just to get it to a deeply nested one. Angular's fix is DI (inject the facade/service directly wherever it's needed, skipping the intermediate layers); React's fix is Context (or a store) for the identical reason — both let a deeply nested component "reach up" for shared state without every component in between forwarding it as a prop.
+- One real difference: Angular's DI is hierarchical and structural (root injector vs. a lazy module's child injector vs. a component-level provider each give you a different, well-defined singleton scope for free), whereas React Context is purely a tree-position mechanism — "whichever Provider is the nearest ancestor wins" — with no separate notion of module-level injector scoping.
 
 🧪 **SDET / Test Automation Angle**: apps that centralize state in a shared service/facade (instead of passing data down through five levels of `@Input`) are dramatically easier to drive in tests. In an integration test (e.g. Angular `TestBed` + component harness), you can often inject the facade/service directly and call `facade.setState(...)` or read `facade.data$` to seed or assert application state, instead of clicking through the UI just to get the app into the state under test. This is faster and far less flaky than pure end-to-end UI setup, and it's a strong reason to push for facade-based architecture even outside of "clean code" arguments — it directly lowers test cost and flakiness.
 

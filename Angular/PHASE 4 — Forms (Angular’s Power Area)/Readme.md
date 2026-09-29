@@ -23,6 +23,26 @@ Become genuinely strong with **Reactive Forms** (enterprise default), including 
 
 📖 **Plain-English definition**: You write a plain HTML form and sprinkle `ngModel` on the inputs; Angular quietly builds the `FormControl`/`FormGroup` objects for you in the background, so you never see or touch the form model directly.
 
+### ⚛️ How This Works in React (Your Mental Anchor)
+There's no real "two-way binding" primitive in React/JSX — `[(ngModel)]` doesn't have a direct equivalent; you always write the `onChange` handler yourself. The closest React pattern is a plain controlled input with `useState` per field:
+```jsx
+function LoginForm() {
+  const [email, setEmail] = useState('');
+  return (
+    <form onSubmit={handleSubmit}>
+      <input
+        name="email"
+        value={email}
+        onChange={(e) => setEmail(e.target.value)}
+        required
+      />
+      <button disabled={!email}>Save</button>
+    </form>
+  );
+}
+```
+`[(ngModel)]="email"` is genuinely just sugar for `[ngModel]` (value in) + `(ngModelChange)` (value out) — exactly the `value={email}` / `onChange={...}` pair you write by hand in React. Angular's version *feels* like magic two-way binding, but it's the same two halves; Angular just wires them together via one directive, whereas React makes you spell out the `onChange` explicitly every time. Uncontrolled inputs + `useRef` (React's other pattern) map more loosely to "let the DOM hold the value," but template-driven forms are still building a real `FormControl` model behind the scenes, so a controlled `useState` input is the more honest comparison.
+
 🧪 **SDET / Test Automation Angle**: The DOM stays close to a "normal" HTML form (named inputs, native validation attributes like `required`/`email`), which often makes basic form-filling automation simpler — locate by `name`/label, type a value, submit. The trade-off for testers: validation state lives on directive instances (`NgModel`, `NgForm`) rather than a component-class object you can inspect directly, so asserting *why* a field is invalid, or asserting intermediate `PENDING`/`dirty` state precisely, is more awkward than with reactive forms. If a suite needs to assert fine-grained validation state, that's a signal the app (or at least that form) is a better fit for reactive forms.
 
 ### Why it exists ✅
@@ -73,6 +93,41 @@ Template-driven forms show up almost entirely at **implementation** time, for ge
 
 📖 **Plain-English definition**: Reactive forms flip the order of template-driven forms: you build the form as a tree of plain JavaScript/TypeScript objects (`FormGroup`, `FormControl`, `FormArray`) in your component class *first*, and the HTML template just binds to that already-existing object — the template never creates the model, it only displays and edits it.
 
+### ⚛️ How This Works in React (Your Mental Anchor)
+This maps well onto a form *library*, not onto raw React — if you already know `react-hook-form` or Formik, reactive forms will feel very familiar:
+
+| Angular Reactive Forms | react-hook-form |
+|---|---|
+| `FormGroup` | the object returned by `useForm()` |
+| `FormControl` | one registered field (`register('email')`) |
+| `Validators.required` | a validation rule (built-in, or a Yup/Zod schema rule) |
+| `valueChanges` (Observable) | `watch()` |
+| `form.value` / `getRawValue()` | `getValues()` |
+| `form.invalid` / `control.errors` | `formState.errors` |
+
+```jsx
+// react-hook-form + Yup, doing the same job as the Angular login form below
+const schema = yup.object({
+  email: yup.string().required().email(),
+  password: yup.string().required().min(8),
+});
+
+function LoginForm() {
+  const { register, handleSubmit, formState: { errors } } = useForm({
+    resolver: yupResolver(schema),
+  });
+  return (
+    <form onSubmit={handleSubmit(onSubmit)}>
+      <input {...register('email')} />
+      {errors.email && <span>{errors.email.message}</span>}
+      <input type="password" {...register('password')} />
+      <button type="submit">Save</button>
+    </form>
+  );
+}
+```
+The philosophical difference: Angular ships the form-state engine (`FormGroup`/`FormControl`) as a first-party framework API — you build the model straight from `@angular/forms` primitives. React has no built-in equivalent at all; `useState` per field doesn't scale to cross-field validation, dynamic fields, or async validation, which is exactly why the ecosystem converged on `react-hook-form`/Formik as React's de facto "reactive forms." `ControlValueAccessor` (wiring a custom component into the form model) maps to a custom `Controller`/`register` integration in react-hook-form for a component that doesn't expose a plain `<input>`-shaped `onChange`/`value` API.
+
 🧪 **SDET / Test Automation Angle**: This is one of the most directly test-relevant Angular topics. A field's `valid`/`invalid`/`touched`/`dirty` state is exactly what drives whether a submit button is `[disabled]`, whether an error message shows, and it's exactly what an E2E or component test asserts on (`expect(submitButton).toBeDisabled()`, `expect(field.classList).toContain('ng-invalid')`, etc.). A subtlety that trips up automated tests: filling a field and immediately clicking submit can behave differently than a real user, because many validators (and CSS classes like `ng-touched`) only activate after a **blur** event, not just after a value changes. A test that sets a value via `element.value = 'x'` and dispatches only an `input` event may see different validity/CSS state than a real user who tabs or clicks away first — so tests should dispatch the same event sequence a user would (`input` then `blur`) rather than only programmatically setting the control's value. Custom validators (below) are also worth knowing: they attach a stable **error key** (e.g., `{ usernameTaken: true }`) to `control.errors`, which is a much sturdier thing for a test to assert on than the rendered error text — hardcoded error-message strings break the moment copy changes, whereas asserting on the error code or the `ng-invalid`/`ng-valid` CSS state survives copy edits.
 
 ### Why it exists ✅
@@ -101,6 +156,21 @@ export class AppModule {}
 
 ### Typed forms (Angular 14) ✅
 Typed forms reduce runtime mistakes and eliminate many `as any` casts.
+
+### ⚛️ How This Works in React (Your Mental Anchor)
+The React equivalent of "typed form values" isn't a forms feature at all — it's typing your validation schema and inferring the form's TypeScript type from it. With Zod:
+```ts
+const loginSchema = z.object({
+  email: z.string().email(),
+  password: z.string().min(8),
+});
+type LoginForm = z.infer<typeof loginSchema>; // { email: string; password: string }
+
+const { register, handleSubmit } = useForm<LoginForm>({
+  resolver: zodResolver(loginSchema),
+});
+```
+(Yup's `yup.InferType<typeof schema>` does the same job if that's your schema library.) Same goal as Angular's `FormGroup<{ email: FormControl<string>; ... }>` below — compile-time safety on the form's shape, no more `as any` casts on `.value`/`.get()` — but a different mechanism: Angular types the form-control tree itself, while React/react-hook-form types the *values object* and derives everything (what `register()` and `watch()` are allowed to return) from that one schema type.
 
 `login-form.component.ts`:
 ```ts

@@ -28,6 +28,28 @@ Understand how Angular 14 updates the UI, choose the right change detection stra
 
 📖 **Plain-English definition**: Change detection is Angular's way of asking, after something happens (a click, a timer, a network response), "did anything on screen need to change?" — and then repainting only the parts of the DOM that actually changed. Default mode checks broadly and often; OnPush mode checks a component only when Angular has a specific reason to believe that component's data changed.
 
+### ⚛️ How This Works in React (Your Mental Anchor)
+This is the single most important comparison in this whole phase, so slow down here.
+
+**React's actual default behavior**: a component re-renders when (a) its own state changes (`useState`/`useReducer` setter called), or (b) its parent re-renders — and a parent re-rendering cascades to *every* child by default, regardless of whether that child's props actually changed. There is no global "check everything" sweep in React the way there is in Angular — React only walks the subtree rooted at whatever triggered the update (or the whole tree, if that's the root). But within that subtree, the default is "re-render everything under here," not "re-render only what changed."
+
+**Angular's Default strategy, compared to that**: Default is *not* quite the same as bare React. It's closer to "React without `React.memo` anywhere, plus a global trigger mechanism you don't control." Concretely:
+- Both share the "parent update cascades to children unless you opt out" behavior — an unmemoized React child re-renders whenever its parent does, exactly like a Default-strategy Angular component gets walked whenever a tick runs.
+- But Angular's Default strategy is checked far more often than "whenever a parent updates" — `zone.js` monkey-patches *every* async API (`setTimeout`, `addEventListener`, promises, `fetch`/XHR), so literally any click anywhere, any timer anywhere, any HTTP response anywhere triggers `ApplicationRef.tick()`, which walks every Default component in the entire tree, not just ones downstream of whatever fired. React has nothing like this — a `setTimeout` in one unrelated part of the app does not cause components elsewhere to re-render just because a timer fired. Angular's Default strategy is genuinely broader than React's normal behavior, not just "the same as React with no memoization."
+
+**`OnPush` is Angular's explicit opt-in to what `React.memo()` gives you by default in that narrower sense**: it skips re-checking a component unless one of a specific set of triggers fires — directly comparable to wrapping a component in `React.memo()`, which skips re-rendering unless its props changed by shallow (reference) comparison. Table it out:
+
+| Angular OnPush trigger | React equivalent |
+|---|---|
+| new `@Input()` reference from parent | `React.memo()`'s shallow prop comparison — a new object/array reference on a prop causes re-render, same reference is skipped |
+| DOM event bound in the component's own template | local `setState` from an event handler — always causes a re-render, in both frameworks |
+| `async` pipe emits a new value | a subscribed value from a hook (`useState` fed by a subscription, or `useSyncExternalStore`) calling its setter |
+| explicit `markForCheck()` / `detectChanges()` | calling `setState` (even to the same value, forcing a re-render) — React's "escape hatch" for the same situation |
+
+**The "wake up" mechanism is the real difference worth being precise about**: in React, the *only* way anything ever re-renders is an explicit `setState`/reducer dispatch somewhere — there's no implicit background sweep, so "what causes this to update" is always traceable to a specific call. In Angular's Default strategy, that global zone.js-driven tick is implicit and invisible in your code — a component gets checked because *something, somewhere* touched a patched async API, not because of anything visible in that component's own file. Angular's `OnPush` makes updates explicit again (the four triggers above), bringing it back in line with React's "nothing updates unless something explicitly says so" model. So the honest framing is: React's default model is arguably *simpler and more explicit* than Angular's Default strategy, and `OnPush` is Angular deliberately trading its implicit-global-check convenience for React-like explicitness and performance.
+
+**Reference equality is the exact same rule in both, including the exact same footgun**: `OnPush`'s dirty-check is a `===` comparison on the new `@Input()` value, identical in mechanism to `React.memo`'s shallow prop comparison and to a `useMemo`/`useCallback`/`useEffect` dependency array. Mutating an array in place (`items.push(x)`) breaks Angular's OnPush change detection for exactly the same underlying reason that it silently breaks a React `useEffect(() => {...}, [items])` or `useMemo(() => {...}, [items])` — the reference didn't change, so the framework's `===` check says "nothing to do here," even though the contents did change. This is not a coincidence or a loose analogy — it's the identical bug class (relying on reference identity to detect change) showing up in both frameworks, with the identical fix (replace immutably: `[...items, x]` in Angular, and the exact same `[...items, x]` in React).
+
 🧪 **SDET / Test Automation Angle**: This is arguably the single most important Angular concept for anyone writing E2E tests, because it explains a huge class of "flaky" test failures. If a component fetches data asynchronously and is `OnPush`, the DOM does not update the instant the data arrives — it updates on the next CD tick, triggered by the async pipe emission (or a `markForCheck()` call). A test that triggers an action and immediately asserts on the resulting text can run in the gap between "data arrived" and "DOM repainted," and see stale or empty content — not because the app is broken, but because the test read the DOM before Angular repainted it. The fix is never `sleep(500)` (slow, and still occasionally flaky); it's to assert on the final state using your framework's built-in auto-retrying assertions — Cypress's `.should()`, Playwright's auto-waiting locators, WebdriverIO's `waitUntil` — which poll until the expected DOM state appears or a timeout is hit. Understanding OnPush turns "this test is flaky, add a wait" into "this test is racing a CD tick, assert correctly instead."
 
 ### Why it exists ✅
@@ -131,6 +153,13 @@ Choosing Default vs `OnPush` is nominally an *implementation-phase* decision mad
 
 📖 **Plain-English definition**: Angular DevTools is the official browser extension (Chrome/Firefox) that adds an Angular-aware panel to your browser's devtools. It lets you inspect the live component tree, see each component's inputs/state, and — most relevantly to everything above — visually profile which components were checked during a change-detection cycle and how long each took, instead of reasoning about zone.js/OnPush purely in your head.
 
+### ⚛️ How This Works in React (Your Mental Anchor)
+This maps almost 1:1 onto **React DevTools' Profiler tab**. Both are "record an interaction, then show a flame graph / bar chart of what actually re-rendered (or, in Angular's case, was checked) and why":
+- Angular DevTools' Profiler tick-by-tick view of "which components were checked, how long each took" ~ React DevTools Profiler's commit-by-commit flame graph of "which components rendered, how long each took."
+- React DevTools Profiler can even highlight *why* a component re-rendered (props changed, state changed, parent re-rendered, hooks changed) — conceptually the same question Angular DevTools' Profiler answers by showing whether an `OnPush` component lit up as checked on a tick it shouldn't have (input ref changed unexpectedly, a stray `markForCheck()`, an impure pipe).
+- The same debugging move applies in both: "this component is expensive and re-renders/gets-checked on every single interaction" is your cue to reach for `React.memo` + stable references in React, or `OnPush` + immutability in Angular — the profiler is what tells you *which* component deserves that treatment instead of guessing.
+- The same production-vs-dev caveat applies to both tools too: profiling a React dev build (with the extra dev-mode checks/warnings React does) can make things look slower than a production build, exactly as this doc notes for Angular's dev mode.
+
 It's most useful for two things:
 - **Components tab**: browse the live component tree and inspect a component's current `@Input()` values and internal properties in real time, without sprinkling `console.log` statements through the codebase. Click a component in the tree and its state shows up directly in the panel.
 - **Profiler tab**: click record, interact with the running app (click a button, type in a form, trigger a data load), then stop recording. You get a bar/flame-graph-style view of each change-detection cycle, showing exactly which components were checked (and which re-rendered) on that tick, and roughly how long each one took. This is the fastest way to answer two very concrete questions:
@@ -158,6 +187,12 @@ It's most useful for two things:
 
 📖 **Plain-English definition**: The `async` pipe lets your template subscribe to an Observable directly (`items$ | async`) and automatically unwraps the latest emitted value — and automatically unsubscribes when the component is destroyed, so you never manage that subscription by hand.
 
+### ⚛️ How This Works in React (Your Mental Anchor)
+There's no exact one-line equivalent in vanilla React, because React doesn't have Observables as a first-class primitive — but the shape of the problem it solves is very familiar:
+- The manual approach the async pipe replaces (`this.sub = this.items$.subscribe(v => this.items = v)` and remembering to unsubscribe in `ngOnDestroy`) is exactly the shape of a `useEffect` that subscribes to something and returns a cleanup function: `useEffect(() => { const sub = items$.subscribe(setItems); return () => sub.unsubscribe(); }, [])`. The async pipe is Angular giving you that `useEffect`-with-cleanup pattern "for free," templated directly, without writing it out by hand every time.
+- If you've used RxJS-in-React (rare, but it exists) or a hook like `useObservable` from a library, that hook is the closer 1:1 — it's doing exactly what the async pipe does: subscribe on mount, call the setter on each emission, unsubscribe on unmount.
+- The `OnPush`-specific trigger behavior (async pipe calls `markForCheck()` internally on every emission) doesn't have a direct React parallel, because React has no separate "mark dirty vs. actually re-render" step — calling the setter *is* the trigger, there's no second implicit step that a manual subscription could forget. That's the sharpest difference: in React, "manually subscribing and calling setState in the callback" gets you the *entire* benefit an async pipe gives you automatically in Angular (no separate markForCheck to forget) — the bug class described below (data updates but DOM doesn't) is specifically an Angular/OnPush problem, not something that has a React equivalent in the same form.
+
 🧪 **SDET / Test Automation Angle**: Because an async-pipe emission is one of the things that wakes up an OnPush component (see the internals above), using `| async` instead of a manual `subscribe()` that assigns a field is what makes the "data arrived -> DOM shows it" chain reliable and testable. A manual subscription that forgets `markForCheck()` in an OnPush component is a classic bug where the underlying data updates (you'd see it in a debugger) but the DOM silently never repaints — no amount of "wait longer" in an E2E test fixes that, because the DOM update was never scheduled at all. If you're debugging a "test times out waiting for text that never appears" failure in an Angular app, checking whether the component uses the async pipe vs. a raw `subscribe()` is a good first diagnostic step.
 
 ✅ Benefits:
@@ -181,6 +216,15 @@ It's most useful for two things:
 Helps Angular reuse DOM nodes across list updates.
 
 📖 **Plain-English definition**: `trackBy` tells `*ngFor` how to recognize "this is the same item as before, maybe just updated" versus "this is a brand-new item," using an identity (like an id) instead of the array position — so Angular can reuse existing DOM elements instead of tearing them down and rebuilding them on every list update.
+
+### ⚛️ How This Works in React (Your Mental Anchor)
+This maps almost 1:1 onto React's `key` prop on list items — same underlying problem, same rule, practically no translation needed:
+```tsx
+{items.map((item) => <li key={item.id}>{item.title}</li>)}
+```
+- `trackBy: trackById` ~ `key={item.id}` — both exist so the renderer's reconciler can match old list items to new ones by identity, and reuse/patch the existing DOM node instead of destroying and recreating it.
+- The exact same rule applies in both: use a **stable id**, not the array index, whenever the list can reorder, have items inserted in the middle, or have items removed. Index-as-key in React causes the identical class of bug as index-based `trackBy` in Angular — items shift position but keep their old index/key, so the reconciler matches the wrong element to the wrong data (classic symptom in both: form inputs or focus/animation state "sticking" to the wrong row after a reorder).
+- One difference: React's `key` is *mandatory* practice (React will warn in the console if it's missing on a list), whereas Angular's `trackBy` is opt-in and silent if you skip it (`*ngFor` just falls back to identity-by-object-reference, which is roughly equivalent to React's default "no key" behavior — also position-based and also prone to the same bug). So if you're used to always reaching for `key` in React out of habit, carry that same habit over to always adding `trackBy` in Angular — it's the same discipline.
 
 🧪 **SDET / Test Automation Angle**: Without `trackBy`, Angular may destroy and recreate DOM nodes for a list even when the underlying data barely changed, and that matters a lot to automation. In Selenium-style tools, an element reference (`WebElement` handle) cached earlier becomes stale the moment its underlying DOM node is destroyed and recreated, throwing a stale-element-reference error on the next interaction — a well-known source of intermittent failures on list-heavy pages. It can also shift DOM ordering/identity in ways that throw off visual-regression diffing tools, flagging "changes" that are really just re-created nodes sitting in the same visual position. A correct `trackBy` (keyed by a stable id, not array index, for lists that can reorder) makes both problems go away.
 
@@ -211,6 +255,15 @@ Pure pipes run only when input references change - perfect with OnPush and immut
 
 📖 **Plain-English definition**: A pure pipe only re-runs its transformation when its input reference actually changes, instead of on every CD cycle — so as long as you replace objects/arrays immutably rather than mutating them, Angular can skip re-running expensive pipe logic most of the time.
 
+### ⚛️ How This Works in React (Your Mental Anchor)
+A pure pipe is directly comparable to `useMemo(() => transform(value), [value])`:
+```tsx
+const formatted = useMemo(() => expensiveFormat(value), [value]);
+```
+- Both skip recomputing the transformation unless the input **reference** changes — a pure Angular pipe checks `===` on its arguments between calls; `useMemo` checks `===` on each dependency-array entry between renders. Identical mechanism, identical reason it exists (skip expensive recompute when the input didn't really change).
+- An "impure pipe" (`pure: false`) is directly comparable to a `useMemo` with a broken or missing dependency array that just recomputes on every render — both give up the optimization entirely and re-run every single cycle regardless of whether the input actually changed. `pure: false` is Angular's explicit, named version of that; in React it's usually an *accidental* bug (an empty `[]` that should have deps, or no `useMemo` at all).
+- The classic footgun is the same in both, too: marking a pipe pure (or wrapping something in `useMemo`) doesn't help at all if the caller keeps recreating a new array/object reference on every call/render anyway (e.g., an inline `.filter()` or `.map()` passed straight into the template/JSX) — the fix has to happen at the data layer (stabilize the reference), not at the memoization declaration.
+
 🧪 **SDET / Test Automation Angle**: This one is less directly observable from the UI, but it matters for an SDET doing performance work: if a page feels laggy under scripted performance profiling (Lighthouse CI, scripted WebPageTest runs) and a heavy pipe (formatting, filtering, sorting) is marked pure but is fed a **new** array/object reference every CD cycle (a common bug — recreating an array in a getter or inline template expression), you lose the whole benefit of purity and the pipe re-runs constantly anyway. "Is this reference actually stable across ticks?" is a good performance-regression question to raise in a code review, not just a functional one.
 
 Rule of thumb:
@@ -229,6 +282,17 @@ Rule of thumb:
 Use when you *must* integrate imperative updates.
 
 📖 **Plain-English definition**: `ChangeDetectorRef` is an escape hatch that lets you manually tell Angular "check this component now" (`detectChanges()`) or "check it on the next tick" (`markForCheck()`) — for cases where data changed in a way Angular's normal triggers didn't notice, like a `setInterval` callback running outside the usual input/event/async-pipe paths.
+
+### ⚛️ How This Works in React (Your Mental Anchor)
+The closest React equivalent is calling `setState` — even with the same value — purely to force a re-render:
+```tsx
+const [, forceRender] = useReducer((x) => x + 1, 0);
+// ...inside a setInterval callback that mutated a ref instead of state:
+forceRender();
+```
+- Both are "the escape hatch for telling the framework something changed that it didn't detect on its own." `markForCheck()` says "re-check this component next tick"; a dummy `setState`/`forceRender` call says the same thing to React — "something changed, please re-render, even though nothing about my normal state/props triggers told you so."
+- The `ClockComponent` example above (a `setInterval` callback updating `now` and calling `markForCheck()`) is functionally identical to the equally common React pattern of a `setInterval` callback calling `setState(new Date().toISOString())` directly — except in React, calling `setState` *is itself* both "update the value" and "the wake-up signal," there's no separate step to remember. Angular's version requires two separate actions (mutate the field, then separately call `markForCheck()`) because Ivy's dirty-checking and the actual field assignment are decoupled — which is exactly why forgetting the second call is such a common, silent bug in Angular OnPush components, in a way that doesn't really have a parallel failure mode in React (skip the `setState` call in React and nothing renders at all — obviously broken, not silently stale).
+- The senior-level React parallel to "prefer async pipe/RxJS `interval()` over manual `ChangeDetectorRef` bookkeeping" is preferring a proper state update (`setState` in the interval callback) over reaching for imperative DOM/ref hacks — both are "don't fight the framework's normal update path unless you have a specific reason to."
 
 🧪 **SDET / Test Automation Angle**: Code that mixes imperative timers/callbacks with `markForCheck()` (like the clock example below) tends to produce timing-sensitive UI, which is exactly the kind of thing that's hard to assert against reliably — a test reading `{{ now }}` or screenshotting it needs to tolerate that the displayed value is only ever as fresh as the last `markForCheck()` call, not real wall-clock time. When reviewing this pattern as an SDET, it's worth checking that `markForCheck()` is actually called after every state mutation; a missing call produces the same "data changed but DOM didn't" bug class as a forgotten async pipe, and it will show up as a flaky or failing UI assertion rather than an obvious code defect.
 
@@ -284,6 +348,24 @@ export class ClockComponent implements OnDestroy {
 Use for extremely frequent events (scroll/mousemove) when CD would be wasteful.
 
 📖 **Plain-English definition**: `NgZone.runOutsideAngular()` lets you run some code (e.g., a high-frequency scroll/mousemove handler) **without** `zone.js` watching it, so Angular doesn't attempt a full change-detection cycle on every single event — useful when events fire far more often than the UI actually needs to repaint.
+
+### ⚛️ How This Works in React (Your Mental Anchor)
+The closest React equivalent is a high-frequency event handler that mutates a ref/DOM node directly instead of calling `setState` on every event:
+```tsx
+function DragTarget() {
+  const boxRef = useRef<HTMLDivElement>(null);
+  const onMouseMove = (e: React.MouseEvent) => {
+    // Direct DOM mutation, no setState — no re-render triggered per pixel
+    if (boxRef.current) {
+      boxRef.current.style.transform = `translate(${e.clientX}px, ${e.clientY}px)`;
+    }
+  };
+  return <div ref={boxRef} onMouseMove={onMouseMove}>drag me</div>;
+}
+```
+- Both are "opt out of the render/CD cycle for a very hot path," for the identical reason: a `mousemove`/`scroll` handler can fire dozens of times per second, and calling `setState` (React) or leaving the handler inside the zone (Angular) on every single event means a full re-render/CD tick per event — wasteful when only a DOM style/transform needs to update, not the whole component tree.
+- The mechanism differs, which is worth being precise about: `runOutsideAngular()` opts a whole block of code out of zone.js's "something happened" tracking, so nothing inside it can trigger a tick unless you explicitly call `ngZone.run(...)` to step back in. React has no equivalent "zone" to step outside of — you opt out simply by *not calling `setState`* in the hot handler and mutating a ref/DOM node directly instead. In React, "in the render cycle" vs. "outside it" is just "did you call a setter," whereas in Angular it's a genuine separate execution context (zone.js) that any code can be run inside or outside of, independent of whether that code happens to update Angular-bound state.
+- The zone.js-and-test-tooling caveat this doc raises for legacy Protractor doesn't really have a React parallel, since React never had an equivalent "app is idle" signal in the first place — Cypress/Playwright/WebdriverIO wait explicitly in both ecosystems, so this is one place where Angular apps (pre-`runOutsideAngular` adoption) had something React apps never did, rather than the two being comparable.
 
 🧪 **SDET / Test Automation Angle**: This is worth flagging explicitly when assessing an app for E2E testability. Historically, Protractor (Angular's old, now-deprecated E2E tool) waited for `zone.js` to report "stability" — no pending timers/promises/event callbacks — before running its next command, which gave Protractor free, reliable auto-waiting. Work done inside `runOutsideAngular` never touches `zone.js`, so it never contributes to that stability signal; a component using this pattern for something like a live chart or an infinite-scroll handler is a known, documented source of E2E flakiness/timeouts in legacy Protractor-based suites. Modern tools (Cypress, Playwright, WebdriverIO) don't hook into `zone.js` at all, so they're immune to this specific failure mode — but that also means they never got the free auto-wait either, so testers moving from a Protractor-era Angular app to one of these tools need to add explicit waits (`cy.get(...).should(...)`, Playwright's built-in auto-retrying locators) instead of relying on any framework-level "app is idle" signal.
 

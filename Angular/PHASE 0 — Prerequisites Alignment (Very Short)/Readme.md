@@ -15,6 +15,27 @@ It uses TypeScript as a **design + metadata** language.
 
 📖 **Plain-English definition:** A class is a blueprint for creating objects that bundle related data (properties) and behavior (methods) together. Angular uses a class as the blueprint for literally everything — every component, service, directive, and pipe.
 
+### ⚛️ How This Works in React (Your Mental Anchor)
+
+React devs mostly write function components today, but classes aren't foreign — pre-hooks React was built entirely on `class extends React.Component`, with `this.state`, `this.props`, and lifecycle methods like `componentDidMount`. The difference is that React treated classes as one option among several and mostly moved away from them after hooks landed (2019), while Angular never moved away — classes remain mandatory for every component, service, directive, and pipe, because DI and decorators are built around class constructors and class-level metadata.
+
+```js
+// React class component (pre-hooks / legacy) — this is what you already know
+class UserComponent extends React.Component {
+  state = { name: 'Sri' };
+  render() {
+    return <h1>{this.state.name}</h1>;
+  }
+}
+```
+
+```ts
+// Angular — this is still the ONLY way to write a component, no function-component option exists
+export class UserComponent {
+  name: string = 'Sri';
+}
+```
+
 In React, classes are legacy. In Angular, **classes are the foundation**.
 
 ```ts
@@ -36,6 +57,20 @@ Angular thinking:
 ### 1.2 Access Modifiers (Very Important) 🔐
 
 📖 **Plain-English definition:** Access modifiers (`public`, `private`, `protected`) control which parts of your code are allowed to see or touch a class member. `public` means "anyone can access this," `private` means "only this class can," and `protected` means "this class and any class that extends it can."
+
+### ⚛️ How This Works in React (Your Mental Anchor)
+
+Plain JS/React has no compile-time-enforced privacy in this sense — until native `#private` class fields, "private" in a React function component just meant "a variable declared in the closure that isn't returned or exposed to the caller." There is no template-visibility concept at all in JSX, because JSX has direct closure access to everything in scope: you can reference any local variable, state, or helper function directly in the JSX you return, nothing is "walled off" the way a template is. Angular's template is a separate compiled artifact, not a closure over the class body, which is exactly why it needs an explicit `public`/`private` contract to know what's reachable from it.
+
+```js
+// React — "cache" is simply not returned/exposed; there's no enforced privacy,
+// JSX could reference it directly if it wanted to, nothing stops it
+function UserComponent() {
+  const cache = new Map();
+  const title = 'Users';
+  return <h1>{title}</h1>;
+}
+```
 
 Angular uses access modifiers intentionally:
 
@@ -66,6 +101,19 @@ Rule:
 ---
 
 ### 1.3 Generics (Angular Uses Them Everywhere) 🧰
+
+### ⚛️ How This Works in React (Your Mental Anchor)
+
+This one maps cleanly if you've used TypeScript with React — generics work identically, Angular just leans on them more pervasively. You've almost certainly already typed `useState<User | null>(null)` or a generic `fetch<T>` wrapper; `http.get<User[]>('/api/users')` is the exact same pattern applied to Angular's `HttpClient` instead of `fetch`. This isn't an Angular-specific concept at all — it's plain TypeScript generics — Angular's APIs (Router, Forms, HttpClient) just expose typed generic signatures everywhere instead of leaving you to cast or type responses manually.
+
+```ts
+// React + TS — you already do this
+const [user, setUser] = useState<User | null>(null);
+
+// Angular — same generic-typing instinct, different API surface
+http.get<User[]>('/api/users');
+```
+
 Angular APIs use generics heavily:
 
 ```ts
@@ -93,6 +141,27 @@ Why it matters:
 ## 2) ES Decorators - Angular's Backbone 🧩
 
 📖 **Plain-English definition:** A decorator is a special function, written as `@SomethingLikeThis` directly above a class, that attaches extra information (metadata) to that class without changing the code inside it — think of it as a label that tells Angular "treat this class as a component" or "this class is allowed to be injected elsewhere."
+
+### ⚛️ How This Works in React (Your Mental Anchor)
+
+There's genuinely no 1:1 React equivalent here — decorators are compiler/metadata-level constructs, not a runtime wrapper. The closest React concept is a Higher-Order Component (`withAuth(MyComponent)`) or a custom hook that "wraps" behavior around a component, but those execute at runtime and return a new function/component; `@Component` and `@Injectable` instead attach static metadata that Angular's compiler reads ahead of time to generate code, before anything is rendered or instantiated. Honestly, the closer real-world comparison isn't React at all — it's something like NestJS decorators (`@Controller`, `@Injectable` — not a coincidence, Angular and NestJS share the same DI philosophy) or TypeORM's `@Entity`/`@Column`. Those are the same "declarative metadata, not a wrapper" pattern, and none of them have a true React parallel either.
+
+```js
+// React HOC — the *closest* analogy, but still fundamentally different:
+// this runs at render time and returns a new component
+function withAuth(Component) {
+  return function Wrapped(props) {
+    return <Component {...props} />;
+  };
+}
+```
+
+```ts
+// Angular — no function is "called" to wrap anything; this is metadata
+// the compiler reads ahead of time to generate rendering/DI code
+@Component({ selector: 'app-user', templateUrl: './user.component.html' })
+export class UserComponent {}
+```
 
 Decorators are not just syntax sugar in Angular.
 They are compiler-visible metadata.
@@ -164,6 +233,21 @@ Angular mindset:
 
 📖 **Plain-English definition:** RxJS is a library for working with values that arrive over time — clicks, HTTP responses, timers — as "streams" you can transform and combine. Instead of getting one value once, you subscribe to a stream and your code reacts every time a new value shows up.
 
+### ⚛️ How This Works in React (Your Mental Anchor)
+
+React has no built-in equivalent to a multi-value, cancelable stream — the closest native tool is a Promise (`fetch().then()`), which gives you exactly one value and no cancellation. Since hooks, React devs handle "things that happen over time" (clicks, timers, async fetches) with inline logic inside `useEffect` plus a manual cleanup function, rather than a dedicated streams library. This isn't a "React can never do this" situation, though — RxJS is a plain JS library, and plenty of React codebases do import `rxjs` and use Observables inside `useEffect` for the same reasons Angular does (cancellable search-as-you-type, combining multiple event sources); Angular is just unusual in making that pattern the default everywhere instead of an occasional import.
+
+```js
+// React — the "no RxJS" default: a manual cancelled-flag replaces unsubscribe
+useEffect(() => {
+  let cancelled = false;
+  fetchUser(id).then((data) => {
+    if (!cancelled) setUser(data);
+  });
+  return () => { cancelled = true; }; // your hand-rolled "unsubscribe"
+}, [id]);
+```
+
 Angular leans heavily on RxJS:
 - HTTP (`HttpClient`)
 - Router params/events
@@ -173,6 +257,21 @@ Angular leans heavily on RxJS:
 ### 3.1 Promise vs Observable (correct mental model)
 
 📖 **Plain-English definition:** A Promise represents a single future value that starts computing immediately and can't be cancelled. An Observable represents zero-to-many future values that don't start doing anything until something subscribes, and that subscription can be cancelled (unsubscribed) at any time.
+
+### ⚛️ How This Works in React (Your Mental Anchor)
+
+React devs are fluent in Promises — `fetch(url).then(res => res.json())` — because that's the only async primitive the browser/React ecosystem hands you natively. A Promise's "eager, single-value, uncancellable" behavior is so normalized in React that the Observable's opposite behavior (lazy, multi-value, cancellable) can feel like the "extra" concept, when really it's just a more general tool solving the same problem. Concretely: in React you cancel an in-flight `fetch` by wiring up an `AbortController` yourself; in Angular, cancelling is just `subscription.unsubscribe()` — same end goal, but Observables make cancellation the default posture instead of a manual opt-in.
+
+```js
+// React — manual cancellation via AbortController
+const controller = new AbortController();
+fetch('/api/user', { signal: controller.signal }).then((res) => res.json());
+controller.abort(); // you have to remember to wire this up
+
+// Angular — cancellation is a first-class, built-in operation
+const sub = this.http.get('/api/user').subscribe();
+sub.unsubscribe();
+```
 
 Promise:
 - one value
@@ -246,6 +345,10 @@ This replaces small-app patterns like:
 ---
 
 ### 3.5 Why This Matters for Testing 🧪
+
+### ⚛️ How This Works in React (Your Mental Anchor)
+
+This flakiness pattern isn't Angular-exclusive — it's really "async UI timing," and React devs hit the same class of bug when a component reads state that's still `null` until a `useEffect`'s fetch resolves and calls `setState`; a test that asserts immediately after a click, before that re-render happens, is flaky for the identical underlying reason. The tooling differs — the React/Testing Library world reaches for `waitFor`/`findBy*` and mocks the network with MSW instead of `HttpTestingController` — but the rule of thumb is the same: wait for observable evidence that data arrived, not a fixed timeout. Worth calling out directly: RxJS is sometimes pulled into React codebases too (inside `useEffect`, or via libraries like `redux-observable`), so this stream-timing mental model isn't purely "an Angular thing" — it's the same idea applied in a framework that makes it opt-in rather than default.
 
 🧪 **SDET / Test Automation Angle:** Understanding Observables — not just "how to use the syntax" — directly explains a lot of E2E flakiness. A UI element bound to `user$ | async` does not exist in the DOM the instant the HTTP call is *fired* — it appears only when the Observable actually *emits*. If a test clicks something and immediately asserts on the result without accounting for that emission, you get a flaky "element not found" failure that looks random but is actually deterministic once you understand stream timing.
 

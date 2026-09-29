@@ -35,6 +35,62 @@ Build multi-page Angular 14 apps with correct navigation, lazy loading, and rout
 
 📖 **Plain-English definition**: The router is Angular's built-in traffic controller. It watches the browser's address bar, figures out which "page" that URL means, and swaps the right component(s) into view — all without a full page reload.
 
+### ⚛️ How This Works in React (Your Mental Anchor)
+This one genuinely maps almost 1:1 onto `react-router-dom` — say that plainly, because a lot of other Angular concepts don't map this cleanly, but route config, params, query params, and nested routes really do.
+
+| Angular | React Router (v6) |
+|---|---|
+| `Routes` config array | `<Routes>` / `<Route path="...">` |
+| `ActivatedRoute.paramMap` | `useParams()` |
+| `ActivatedRoute.queryParamMap` | `useSearchParams()` |
+| `children: [...]` (nested routes) | nested `<Route>` elements + an `<Outlet />` |
+| `<router-outlet>` | `<Outlet />` |
+
+Side-by-side:
+```ts
+// Angular route config
+const routes: Routes = [
+  { path: 'items', children: [
+      { path: '', component: ItemsPageComponent },
+      { path: ':id', component: ItemDetailsPageComponent },
+    ] },
+];
+```
+```jsx
+// React Router v6 equivalent
+<Routes>
+  <Route path="items" element={<ItemsLayout />}>
+    <Route index element={<ItemsPage />} />
+    <Route path=":id" element={<ItemDetailsPage />} />
+  </Route>
+</Routes>
+```
+Reading params/query params:
+```jsx
+function ItemDetailsPage() {
+  const { id } = useParams();
+  const [searchParams] = useSearchParams();
+  const tab = searchParams.get('tab') ?? 'details';
+  // ...
+}
+```
+
+Lazy loading (also part of this topic) maps almost 1:1 too — both use dynamic `import()` under the hood:
+```ts
+// Angular: wired at the router-config level
+loadChildren: () => import('./items/items.module').then(m => m.ItemsModule)
+```
+```jsx
+// React: wired at the component level, with an explicit Suspense boundary
+const ItemsPage = React.lazy(() => import('./ItemsPage'));
+<Suspense fallback={<Spinner />}>
+  <ItemsPage />
+</Suspense>
+```
+The real difference: Angular's router owns "when to fetch the chunk" as part of navigation itself; in React you have to remember to wrap the lazy component in `<Suspense>` yourself, and there's no router-level "module" concept — it's just a lazily-imported component tree.
+
+One genuine gap: Angular's `ActivatedRoute.data` (static route metadata like `{ title: 'Item details' }`) has no built-in equivalent in React Router before the v6.4+ `loader`/`handle` APIs — you'd typically just hardcode it as a prop on the route's `element` or in a config object you build yourself.
+
 🧪 **SDET / Test Automation Angle**: Deep-linking is one of the most common and cheapest E2E patterns — instead of clicking through five screens to reach a detail page, you `page.goto('/items/42?tab=history')` or `cy.visit('/items/42?tab=history')` directly and assert the right view/data loaded. This only works because the router treats every URL as a valid entry point, not just a result of in-app clicks. Lazy loading (covered below) also matters for tests: the first visit to a lazy route fetches a JS chunk over the network, so an E2E test may briefly see a spinner or blank outlet — assert on a stable DOM state (e.g., `waitFor` a specific element), never on a fixed `sleep()`. Route-level code splitting is also what bundle-size/performance budgets (e.g., Lighthouse CI gates) actually measure per chunk, so it's worth knowing which routes are lazy when debugging a failed perf budget in CI.
 
 ### Why it exists ✅
@@ -208,6 +264,21 @@ Routes:
 
 📖 **Plain-English definition**: Lazy loading (above) defers a route's JS chunk until the user actually visits it — great for initial bundle size, but it means the *first* click on a lazy route triggers a network fetch the user can feel. Preloading is the fix: once the initial app has finished loading, Angular quietly fetches the lazy chunks *in the background*, before the user ever clicks. By the time they navigate there, the code is already sitting in the browser — best of both worlds: small initial bundle, no click-time lag.
 
+### ⚛️ How This Works in React (Your Mental Anchor)
+This is the one place in Angular Router where React Router has no first-class equivalent — say so plainly rather than forcing a mapping. Classic React Router doesn't ship a "fetch the next likely route's chunk in the background, automatically" feature at all.
+
+The closest DIY equivalent is manually calling the same dynamic `import()` function early, before the user actually clicks:
+```jsx
+const loadItemsPage = () => import('./ItemsPage');
+const ItemsPage = React.lazy(loadItemsPage);
+
+// prefetch on hover/focus, ahead of navigation
+<Link to="/items" onMouseEnter={() => loadItemsPage()}>Items</Link>
+```
+Because bundlers memoize dynamic `import()` calls, calling `loadItemsPage()` on hover "warms" the exact same chunk `React.lazy` will later mount — so by the time the click happens, the network request is already done or in flight.
+
+React Router's newer data-router APIs (v6.4+, `createBrowserRouter` + route `loader`s) get a bit closer, since a `loader` can in principle be invoked ahead of navigation, but even that isn't a real equivalent of `PreloadAllModules` — you'd have to hand-roll your own "preload every route after mount" logic. There's no built-in `PreloadingStrategy` interface to implement in React; it's a genuinely Angular-specific, first-class router feature.
+
 - Lazy loading controls **what's in the initial bundle**.
 - Preloading controls **when the rest arrives** — on Angular's own schedule, independent of user clicks.
 
@@ -301,6 +372,27 @@ Route structure and the lazy/preload split are usually settled at **requirements
   - `CanLoad` (block lazy module loading)
 
 📖 **Plain-English definition**: A guard is a yes/no (or "redirect instead") check that runs *before* Angular lets you enter or leave a route — like a bouncer checking ID before you walk through a door, or a gate agent asking if you're really allowed to skip this exit.
+
+### ⚛️ How This Works in React (Your Mental Anchor)
+There's no router-config equivalent of `canActivate` in React Router — no `guards: [...]` option you attach to a route. The idiomatic React pattern does the same job as a wrapper/higher-order component, usually called something like `<PrivateRoute>` or `<RequireAuth>`:
+```jsx
+function RequireAuth({ children }) {
+  const { isLoggedIn } = useAuth();
+  const location = useLocation();
+  if (!isLoggedIn) {
+    return <Navigate to="/login" state={{ from: location }} replace />;
+  }
+  return children;
+}
+
+// usage
+<Route path="/dashboard" element={
+  <RequireAuth><DashboardPage /></RequireAuth>
+} />
+```
+Conceptually identical job: check some auth/permission state, then either render the page or redirect (`<Navigate>` ~ returning a `UrlTree` from `canActivate`). The difference is *where* the check lives: Angular treats it as a router-config concern (a class attached to the route), React treats it as a component-tree concern (a wrapper component you nest around the route's `element`). That also gives the "does a guard on the parent protect a nested child route" question from below a React parallel — if you only wrap the parent route's element and a nested `<Route>` renders independently through its own `<Outlet>`, you must wrap `RequireAuth` at every level that needs protection, same gap as Angular's `CanActivateChild`.
+
+`CanDeactivate` (unsaved-changes guard) has no clean React Router v6 built-in either — the common approach is a `useBlocker`/`unstable_useBlocker` hook or a manual `beforeunload` listener plus your own confirm-dialog state, noticeably less turnkey than Angular's `CanDeactivate<T>` interface.
 
 🧪 **SDET / Test Automation Angle**: `CanActivate` is exactly the mechanism behind auth-gated pages, and it's also the reason E2E suites don't need to automate a full login UI on every single test. The two common bypass strategies are: (1) mock the guard's dependency (the auth service / token store) so `canActivate()` always resolves `true` in test builds, or (2) seed `localStorage`/`sessionStorage`/cookies with a valid token directly via the test framework (`page.addInitScript`, `cy.window()`, etc.) before navigating, so the real guard logic runs but sees an already-authenticated user. Both are far faster and less flaky than clicking through a login form for every spec, and they isolate "does the auth guard work" tests (a handful) from "does this feature work" tests (which shouldn't care about login at all).
 
@@ -419,6 +511,30 @@ Guards start as a **requirements/design** decision — what's the app's auth mod
 - Resolvers fetch required data before a route activates and attach it to `ActivatedRoute.data`.
 
 📖 **Plain-English definition**: A resolver is a "fetch this data first" step Angular runs automatically before it shows you the page, so the page never renders in a half-ready, empty-then-populated state.
+
+### ⚛️ How This Works in React (Your Mental Anchor)
+This is the one Angular Router concept with a genuinely close, direct React Router equivalent — if you're on React Router v6.4+. Its data APIs added `loader` functions on route definitions that fetch data *before* the route renders, exactly like a resolver:
+```jsx
+// React Router v6.4+ (createBrowserRouter)
+const router = createBrowserRouter([
+  {
+    path: '/items/:id',
+    element: <ItemDetailsPage />,
+    loader: async ({ params }) => {
+      const item = await fetchItem(params.id);
+      return item; // available via useLoaderData()
+    },
+  },
+]);
+
+function ItemDetailsPage() {
+  const item = useLoaderData();
+  return <h2>{item.title}</h2>;
+}
+```
+`resolve: { item: ItemResolver }` ~ `loader`, `ActivatedRoute.data` ~ `useLoaderData()`. Both block navigation until the data (or an error) is settled, so neither leaves a flash of an empty page.
+
+If you're on an older React Router version (v5, or v6 without the data router), there's no router-level equivalent at all — the DIY fallback is fetching inside a wrapping component (`useEffect` + `useState`) and rendering a spinner until it resolves. That's exactly the "fetch-in-component" alternative the Angular docs below contrast resolvers against — except in that older-React world, it's the *only* option, not a deliberate trade-off.
 
 🧪 **SDET / Test Automation Angle**: Because navigation is *blocked* until the resolver's data arrives, "the page is ready" means something different than on a component that fetches its own data after rendering. For a resolver-backed route, waiting for a specific, data-dependent DOM element (e.g., the item title text, not a generic spinner) to appear is a reliable readiness signal — there's no in-between state where the route is active but the data hasn't arrived yet. This is more robust than a fixed `sleep()`/`cy.wait(ms)`, and it also means flaky "sometimes the detail page is blank" bugs are more likely a resolver error-handling gap (see the `catchError` pattern below) than a timing issue in the test.
 

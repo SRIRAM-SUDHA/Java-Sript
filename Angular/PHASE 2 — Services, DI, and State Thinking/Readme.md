@@ -32,6 +32,24 @@ Learn Angular's Dependency Injection (DI) deeply, adopt service-first architectu
 
 📖 **Plain-English definition**: Dependency Injection means a component/service doesn't build the things it needs itself — it just says "I need a Logger" in its constructor, and Angular hands it a ready-made one, the way a hotel front desk hands you a room key instead of you building your own room.
 
+### ⚛️ How This Works in React (Your Mental Anchor)
+React's rough equivalent is Context (`useContext`) for handing an instance down a tree without prop-drilling — but that's where the similarity ends. Context is entirely manual: you create the context, you wrap a `<Provider>` yourself somewhere in the tree, and every consumer must sit inside that provider or it gets the default (or nothing). Angular's DI is automatic once a service is registered (`providedIn: 'root'`): any class anywhere just declares the dependency and Angular resolves it by walking the injector hierarchy — there's no provider tree you have to wire by hand, and no real React parallel to that automatic, hierarchy-based resolution.
+
+```jsx
+// React: you build and wire the provider yourself
+const LoggerContext = createContext(null);
+function App() {
+  return (
+    <LoggerContext.Provider value={new ConsoleLogger()}>
+      <Page />
+    </LoggerContext.Provider>
+  );
+}
+function Page() {
+  const logger = useContext(LoggerContext); // only works because App wrapped it manually
+}
+```
+
 🧪 **SDET / Test Automation Angle**: DI is the single most important concept for writing fast, deterministic tests instead of always reaching for full E2E. Because components/services declare *what* they need rather than *how* to construct it, you can override any provider in `TestBed.configureTestingModule({ providers: [{ provide: UsersService, useValue: mockUsersService }] })` and the component under test never knows the difference. This lets you replace real `HttpClient` calls, real auth services, or real date/clock providers with test doubles — no real network calls, no flaky backend dependency, no waiting on a real server in your unit/integration test suite. Save the real service wiring for a smaller number of true E2E tests.
 
 ### Why it exists
@@ -198,6 +216,9 @@ export class CounterAComponent {
 
 📖 **Plain-English definition**: `inject()` is a standalone function (from `@angular/core`) that fetches a dependency from the current injector *right where you call it*, instead of declaring it as a constructor parameter. It's the same DI system underneath — same tokens, same injector hierarchy, same scoping rules — just a different syntax for *asking* for the dependency, one that works in places a constructor doesn't fit naturally (field initializers, factory functions, and other non-class or non-constructor contexts).
 
+### ⚛️ How This Works in React (Your Mental Anchor)
+There's no real React equivalent to `inject()` — React has no dependency injection system to hook into in the first place. The closest mental match is calling a custom hook (`const logger = useLogger()`) to grab something inside a function body instead of receiving it as a parameter/prop, but that hook is just reading from React Context under the hood, not resolving a token from an injector hierarchy — treat the analogy as "a function call instead of a parameter," not as "React secretly has DI too."
+
 ```ts
 import { inject, Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
@@ -248,6 +269,18 @@ DI scoping is the concept most likely to be a **Design-phase** decision that out
 - Components should mostly orchestrate UI, not business rules.
 
 📖 **Plain-English definition**: A service is just a plain class that holds logic or data that isn't tied to any one screen — think of it as the "backend of your frontend," where the actual rules and API calls live, separate from the buttons and templates that display them.
+
+### ⚛️ How This Works in React (Your Mental Anchor)
+The closest React pattern is a plain module-level singleton — a non-component file that exports functions and/or mutable state, imported directly wherever it's needed — or a Context-provided object shared down the tree. Put simply: an Angular service is basically "a Context value that also happens to have DI-managed lifecycle" — Angular creates it once and caches it for you (`providedIn: 'root'`), whereas in React you either rely on module-scope caching yourself or wire the singleton into a provider by hand.
+
+```ts
+// React: plain module-level singleton, no framework involved
+let cachedService = null;
+export function getUsersService() {
+  if (!cachedService) cachedService = createUsersService();
+  return cachedService;
+}
+```
 
 🧪 **SDET / Test Automation Angle**: Because business logic and API calls live in a service (not scattered across components), you can unit-test that logic in complete isolation — instantiate the service directly or via `TestBed`, inject a mocked `HttpClient`/`ItemsApiService`, and assert on the service's outputs without ever rendering a component or touching the DOM. For component tests, you go one level up: mock the *facade* (e.g., `{ provide: ItemsFacade, useValue: fakeFacade }`) so the component test only verifies "does this component render/react correctly to `loading$`/`items$`/`error$`," which is faster and far less brittle than driving the same scenario through a full E2E flow hitting a real backend.
 
@@ -384,6 +417,17 @@ Deciding what belongs in a service vs. a component is a day-to-day **Implementat
 
 📖 **Plain-English definition**: A Promise is a delivery receipt for exactly one future value ("your pizza will arrive once, eventually"); an Observable is a subscription to a stream that can deliver zero, one, or many values over time ("a live news feed you can tune into and tune out of whenever you want").
 
+### ⚛️ How This Works in React (Your Mental Anchor)
+You already know the underlying problem from React: a `useEffect` that fires on every keystroke, a hand-rolled `setTimeout`-based debounce with a cleanup function, or a library like `use-debounce`/`react-query` managing cancellation and stale-response races for you. RxJS Observables solve that same class of problems — values over time, cancellation, composition — but as chainable, reusable operators (`switchMap`, `debounceTime`, `distinctUntilChanged`) instead of imperative `useEffect` cleanup logic and manual "is this still the latest request" ref-tracking.
+
+```jsx
+// React: hand-rolled debounce + cancellation via useEffect cleanup
+useEffect(() => {
+  const id = setTimeout(() => search(query), 300);
+  return () => clearTimeout(id); // you write the cancellation yourself
+}, [query]);
+```
+
 🧪 **SDET / Test Automation Angle**: A `BehaviorSubject`/`async pipe`-driven element that "shows up eventually" in the UI is not a flaky bug — it's a stream emission arriving asynchronously (e.g., after an HTTP response resolves and `loading$` flips to `false`). Testers should avoid fixed `sleep(2000)` calls, which are both slow and unreliable; instead, assert against the underlying stream/service state directly in integration tests (e.g., `facade.loading$` value, or trigger `stateSubject.next(...)` manually to drive the component into a known state), or use explicit condition-based waits (`waitFor`/`should('not.exist')`) in E2E tests that wait for the actual DOM consequence of the emission rather than a guessed time delay.
 
 ### Why Angular leans on RxJS
@@ -420,6 +464,9 @@ saveAll$ = from(items).pipe(mergeMap((i) => this.api.save(i)));
 ### `debounceTime` + `distinctUntilChanged` — Taming Rapid-Fire Input ⌨️
 
 📖 **Plain-English definition**: `debounceTime(ms)` waits for a pause of at least `ms` milliseconds in emissions before letting one value through — so instead of reacting to every single keystroke, it reacts only once the user has stopped typing for a moment. `distinctUntilChanged()` compares each new value to the last one it emitted and skips it if nothing actually changed — so pressing a key that doesn't change the value (or re-focusing a field) doesn't trigger duplicate work.
+
+### ⚛️ How This Works in React (Your Mental Anchor)
+This is exactly the `useEffect` + `setTimeout` debounce pattern (or the `use-debounce` library) you already reach for in React — `debounceTime(300)` is the RxJS operator doing what your `setTimeout(..., 300)` plus a cleanup function does by hand, and `distinctUntilChanged()` is the equivalent of an early-return guard like `if (value === lastValue) return;` before firing a request. The real difference is composability: in RxJS these are chainable, reusable operators you `pipe()` together, rather than imperative logic you re-write inside every component's `useEffect`.
 
 Realistic search/typeahead pipeline, using this file's `ItemsApiService`/`ItemsFacade` naming style:
 

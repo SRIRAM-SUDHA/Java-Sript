@@ -23,6 +23,12 @@ A few ways to actually use this for job hunting:
 
 ---
 
+## Reading This as a React Developer ⚛️
+
+Each phase folder now also carries inline **⚛️ How This Works in React (Your Mental Anchor)** callouts placed directly under the per-topic 📖 definitions — not a separate comparison document, but a comparison sitting right next to the Angular concept it maps to. So instead of learning Angular from zero, you can treat almost every topic as "here's the React/JS thing you already know, here's concretely what's different and why Angular made that choice" — and where there genuinely isn't a clean React equivalent (like decorators), the callout says so honestly instead of forcing a false analogy.
+
+---
+
 ## PHASE 0 — Prerequisites Alignment (Very Short)
 
 _(You likely know most of this, but Angular is strict)_

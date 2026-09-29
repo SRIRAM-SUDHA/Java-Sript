@@ -28,6 +28,22 @@ Make production-grade API calls with `HttpClient`, centralized HTTP policies (in
 
 📖 **Plain-English definition**: `HttpClient` is Angular's built-in way of talking to a server over HTTP — think of it as a phone line the app uses to ask a backend for data (GET), send new data (POST), change it (PUT), or remove it (DELETE), and get the answer back as a stream you can react to.
 
+### ⚛️ How This Works in React (Your Mental Anchor)
+This one maps almost directly. In React you'd call `fetch()` or `axios` inside a `useEffect` (or inside a React Query/SWR hook, or an event handler for a POST):
+```tsx
+useEffect(() => {
+  let cancelled = false;
+  axios.get<ItemDto[]>(`${API_BASE_URL}/items`).then((res) => {
+    if (!cancelled) setItems(res.data);
+  });
+  return () => { cancelled = true; }; // React's version of "unsubscribe cancels it"
+}, []);
+```
+- `this.http.get<ItemDto[]>(url)` ~ `axios.get<ItemDto[]>(url)` (or `(await fetch(url)).json() as ItemDto[]`) — in both cases the generic/assertion is a **compile-time-only** TypeScript hint, not runtime validation. Neither Angular nor axios/fetch checks that the JSON actually matches `ItemDto[]` at runtime — that gap is identical in both worlds.
+- Angular's "cold Observable, unsubscribing cancels the request" ~ React's cleanup-function pattern in `useEffect` (the `cancelled` flag above, or an `AbortController` passed to `fetch`/axios). Both exist to solve the same problem: a component unmounts/navigates away before the request resolves, and you don't want to `setState`/emit into a dead component.
+- The real difference: Angular gives you this cold/cancellable behavior "for free" as a core primitive (any Observable), while in React you're manually wiring cleanup (or leaning on a library like React Query, which handles cancellation and caching for you — see the `shareReplay` comparison below).
+- Error handling is the same shape too: an Angular `error` callback / RxJS `catchError` ~ a `.catch()` on the promise or a try/catch around `await`, and both need an explicit mapping step (like `toUserMessage()` below) to turn a raw error object into something the UI can show.
+
 🧪 **SDET / Test Automation Angle**: This is the same contract an SDET tests directly, just from a different angle — instead of clicking through the UI, you can point a REST client (Postman, RestAssured, `requests`) at the exact same `/items` endpoint `HttpClient` calls and assert on the JSON shape completely independently of the UI. That overlap is valuable: if both the API test suite and the UI rely on the same `ItemDto`, a backend contract change breaks both in the same predictable way. But remember `get<T>()` is a compile-time hint only — TypeScript will happily believe the response is an `ItemDto[]` even if the backend returns `null` or a differently-shaped object; that runtime contract gap is exactly what an API test (or an e2e test against a real/staging backend) is for, since the UI test alone won't catch it. On error handling specifically: bring the app to a 401, a 500, and a hung/never-responding request (mock or throttle the network) and verify the UI shows the right message via `toUserMessage()` rather than spinning forever or leaking a raw stack trace — "the loader spins forever" is one of the most common real-world bug reports, and it traces directly back to a facade whose `error` callback wasn't handled.
 
 ### Why it exists ✅
@@ -180,6 +196,12 @@ export function toUserMessage(err: unknown): string {
 
 📖 **Plain-English definition**: Think of a normal `HttpClient` call like everyone dialing the same phone number separately and asking the same question — the operator answers the call fresh, every time. `shareReplay(1)` is like putting one person on the phone to ask the question once, writing the answer on a whiteboard, and having everyone else just read the whiteboard — one call, many readers.
 
+### ⚛️ How This Works in React (Your Mental Anchor)
+If you've used **React Query (TanStack Query)** or **SWR**, you've already used this idea — you just didn't have to build it yourself. `shareReplay(1)` is Angular's DIY version of what React Query gives you for free via its cache:
+- React Query: `useQuery(['referenceData'], fetchReferenceData)` — the first component to mount with that query key fires the request; every other component that calls `useQuery(['referenceData'], ...)` anywhere else in the tree, at any time, gets the cached result instantly instead of firing a new request. `staleTime` controls how long that cached value is trusted before a background refetch — that's the library's answer to the "refreshable cache" problem this doc solves manually with `refCount: true` or an explicit `refresh()`.
+- SWR: `useSWR('referenceData', fetcher)` — same dedup-by-key behavior, plus `mutate('referenceData')` as the explicit "invalidate and refetch" escape hatch, which plays the same role as this doc's `refresh()` method.
+- The difference worth being honest about: React Query/SWR give you this caching as a first-class, batteries-included feature keyed by a query key string, with built-in invalidation, retries, and stale-while-revalidate semantics. Plain Angular `HttpClient` + RxJS gives you none of that out of the box — `shareReplay(1)` is a single, low-level operator, and you (as shown above) have to hand-build the "class field so it's only created once" plumbing and the invalidation strategy yourself. If you're on a plain `fetch`/`axios` React app with no query library, you'd be hand-rolling the same kind of module-level cached-promise pattern to get this behavior — so the comparison is really "Angular's manual primitive" vs. "what a query library automates," not "Angular has it and React doesn't."
+
 #### Code example: caching reference data in a service
 `reference-data.api.ts`:
 ```ts
@@ -280,6 +302,30 @@ Any component that injects `ReferenceDataApiService` and calls `getReferenceData
 - Provide them via `HTTP_INTERCEPTORS` multi-provider.
 
 📖 **Plain-English definition**: An interceptor is a checkpoint every outgoing request and incoming response passes through automatically — like airport security for your HTTP traffic — where you can attach things (an auth token), inspect things (log timing), or react to things (a failed response) without touching the code that made the original call.
+
+### ⚛️ How This Works in React (Your Mental Anchor)
+This maps very closely onto **axios interceptors** specifically — if the codebase you're picturing uses axios, this is almost a 1:1 translation:
+```ts
+// Auth: attach a header to every outgoing request
+axios.interceptors.request.use((config) => {
+  const token = getTokenSnapshot();
+  if (token) config.headers.Authorization = `Bearer ${token}`;
+  return config;
+});
+
+// Global error handling / logging: inspect every response (or error) on the way back
+axios.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    console.log(`[HTTP] ${error.config?.method} ${error.config?.url} failed`);
+    return Promise.reject(error);
+  }
+);
+```
+- `axios.interceptors.request.use(...)` ~ an Angular interceptor cloning the request on the way out (the `AuthInterceptor` above).
+- `axios.interceptors.response.use(...)` ~ an Angular interceptor's downstream `.pipe(...)` handling on the way back (the `TimingInterceptor` above, or a `catchError` for global error mapping).
+- If the codebase uses plain `fetch()` instead of axios (no built-in interceptor concept), the DIY equivalent is a single wrapped `fetchWithAuth()` helper that everyone calls instead of raw `fetch` — it attaches the header, checks `response.ok`, and centralizes logging, exactly like an Angular interceptor centralizes that logic outside every call site. That hand-rolled helper is doing precisely what `HTTP_INTERCEPTORS` does, just as one function instead of a framework-composed chain.
+- One real difference: Angular's `HTTP_INTERCEPTORS` is a **multi-provider chain** composed automatically by DI — you register N interceptors and Angular runs them all in order for every request, whereas with axios you're calling `.interceptors.request.use()` N times yourself to build up that same chain, and with a `fetchWithAuth()` helper you have exactly one link (you'd have to compose multiple wrapper functions yourself for more).
 
 🧪 **SDET / Test Automation Angle**: Interceptors are invisible in the UI, but they matter a lot for automation strategy. Because `AuthInterceptor` attaches the bearer token to every request, an E2E test usually doesn't need to automate the login form at all for the bulk of the suite — it can seed a valid token straight into `localStorage`/`sessionStorage` before the page loads and start the test already authenticated, which is faster and far less flaky than driving a real login UI on every run. A retry interceptor cuts the other way: adding retry-on-failure for flaky calls makes transient backend hiccups invisible to E2E tests (good for E2E stability), but that also means E2E will never exercise the retry logic itself — wrong backoff, retrying a non-idempotent POST, an infinite retry loop. That logic needs its own focused unit tests against a mocked `HttpTestingController`, because no UI-level test will deliberately trigger it. Logging/timing interceptors are also a convenient hook for a lightweight "API performance" smoke check: assert requests complete within an SLA during automated regression runs.
 
