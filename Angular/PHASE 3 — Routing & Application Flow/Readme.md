@@ -33,6 +33,10 @@ Build multi-page Angular 14 apps with correct navigation, lazy loading, and rout
   - `ActivatedRoute`: params/query/data streams for the current route
   - `Router`: imperative navigation + events
 
+📖 **Plain-English definition**: The router is Angular's built-in traffic controller. It watches the browser's address bar, figures out which "page" that URL means, and swaps the right component(s) into view — all without a full page reload.
+
+🧪 **SDET / Test Automation Angle**: Deep-linking is one of the most common and cheapest E2E patterns — instead of clicking through five screens to reach a detail page, you `page.goto('/items/42?tab=history')` or `cy.visit('/items/42?tab=history')` directly and assert the right view/data loaded. This only works because the router treats every URL as a valid entry point, not just a result of in-app clicks. Lazy loading (covered below) also matters for tests: the first visit to a lazy route fetches a JS chunk over the network, so an E2E test may briefly see a spinner or blank outlet — assert on a stable DOM state (e.g., `waitFor` a specific element), never on a fixed `sleep()`. Route-level code splitting is also what bundle-size/performance budgets (e.g., Lighthouse CI gates) actually measure per chunk, so it's worth knowing which routes are lazy when debugging a failed perf budget in CI.
+
 ### Why it exists ✅
 - 🧭 Deep links: load the app directly at `/items/42?tab=history`.
 - ⏪⏩ History integration: back/forward just works.
@@ -48,6 +52,8 @@ Navigation is a pipeline:
 6. **Activate routes**: update outlets and create components.
 
 > 🔍 Key insight: routing is not "render component X". It is "build and activate a route state".
+
+Under the hood, `Router.navigateByUrl()` kicks off a single **RxJS observable chain** (Angular's source calls this a `NavigationTransition`) that pipes the URL through operators roughly named `applyRedirects` -> `recognize` -> `runGuards` -> `resolveData` -> `activateRoutes`. Route *matching* itself is a recursive segment-by-segment comparison: the router walks the `UrlSegmentGroup` produced from the URL against each `Route` in order and takes the **first** config whose `path` segments (and `pathMatch`) match — which is exactly why route order matters and why a greedy `**` route must be declared last. A successful match builds a `RouterStateSnapshot`, a tree of `ActivatedRouteSnapshot`s that mirrors your nested `children`/lazy module structure.
 
 ### Code examples (Angular 14, NgModule-based)
 
@@ -198,6 +204,91 @@ Routes:
 - Explain the pipeline: URL parse -> recognition -> guards -> resolvers -> activation.
 - Mention that Router builds a route tree (`RouterState`) and activates outlets accordingly.
 
+### Preloading Strategies — Fixing the First-Navigation Lag ⚡
+
+📖 **Plain-English definition**: Lazy loading (above) defers a route's JS chunk until the user actually visits it — great for initial bundle size, but it means the *first* click on a lazy route triggers a network fetch the user can feel. Preloading is the fix: once the initial app has finished loading, Angular quietly fetches the lazy chunks *in the background*, before the user ever clicks. By the time they navigate there, the code is already sitting in the browser — best of both worlds: small initial bundle, no click-time lag.
+
+- Lazy loading controls **what's in the initial bundle**.
+- Preloading controls **when the rest arrives** — on Angular's own schedule, independent of user clicks.
+
+#### Code example (Angular 14, NgModule-based)
+`app-routing.module.ts`:
+```ts
+import { NgModule } from '@angular/core';
+import { PreloadAllModules, RouterModule, Routes } from '@angular/router';
+
+const routes: Routes = [
+  {
+    path: 'dashboard',
+    loadChildren: () =>
+      import('./dashboard/dashboard.module').then((m) => m.DashboardModule),
+  },
+  {
+    path: 'items',
+    loadChildren: () =>
+      import('./items/items.module').then((m) => m.ItemsModule),
+  },
+];
+
+@NgModule({
+  imports: [
+    RouterModule.forRoot(routes, { preloadingStrategy: PreloadAllModules }),
+  ],
+  exports: [RouterModule],
+})
+export class AppRoutingModule {}
+```
+
+`PreloadAllModules` preloads *every* lazy route after the initial navigation completes. For larger apps, that can waste bandwidth on routes almost nobody visits (e.g., an admin section, a rarely-used settings page). In that case, write a **custom preloading strategy** by implementing `PreloadingStrategy` and checking route `data`:
+
+```ts
+import { Injectable } from '@angular/core';
+import { PreloadingStrategy, Route } from '@angular/router';
+import { Observable, of } from 'rxjs';
+
+@Injectable({ providedIn: 'root' })
+export class SelectivePreloadingStrategy implements PreloadingStrategy {
+  preload(route: Route, load: () => Observable<unknown>): Observable<unknown> {
+    return route.data?.['preload'] ? load() : of(null);
+  }
+}
+```
+
+```ts
+{
+  path: 'items',
+  data: { preload: true },
+  loadChildren: () => import('./items/items.module').then((m) => m.ItemsModule),
+}
+```
+
+```ts
+RouterModule.forRoot(routes, { preloadingStrategy: SelectivePreloadingStrategy })
+```
+
+Only routes flagged `{ data: { preload: true } }` get fetched early; everything else stays lazy-only.
+
+### ✅ Best Practices (Preloading)
+- Use `PreloadAllModules` as a reasonable default for small/medium apps — simple, and the background fetches rarely hurt.
+- Use a **custom preloading strategy** for large apps, so you don't spend bandwidth preloading routes most users will never open.
+
+### ❌ Avoid (Preloading)
+- Preloading routes gated behind auth/roles that most users will never reach (e.g., an admin-only module for a user base that's 99% non-admin) — it wastes bandwidth for no benefit.
+
+⚡ **Performance note**: Phase 6's performance checklist already calls for "lazy-load feature modules (Phase 3)." Preloading is the natural next step after that: once you've split the bundle, preloading trades a little background bandwidth (fetched during idle time, after the initial load) for a faster *perceived* navigation later — the chunk is already there when the user clicks.
+
+🧪 **SDET / Test Automation Angle**: Preloading changes the *timing profile* of the app, and that matters for E2E test design. In a lazy-loading-only app, a route's first navigation is reliably a bit slow (network fetch on click). Add `PreloadAllModules`, and that same route can become consistently fast — but only once the background preload requests have actually finished. If an E2E test navigates immediately after app bootstrap (before those background fetches complete), it can hit the same "first click is slow" symptom intermittently — a flaky failure that looks like a bug but is really the test racing the preloader. The fix is the same principle as elsewhere in this file: wait for the actual expected DOM state to appear rather than asserting immediately or sleeping a fixed duration; don't assume "app loaded" means "all lazy chunks preloaded."
+
+🎯 **Interview insight**: "Lazy load vs preload" is a very common follow-up after explaining lazy loading. The senior-level answer: lazy loading controls what's in the initial bundle; preloading controls *when* the rest arrives, independently of user clicks — and the two are meant to be used together, not as alternatives.
+
+### 🔄 SDLC Angle
+Route structure and the lazy/preload split are usually settled at **requirements/design** time — someone maps app sections to feature modules and decides an initial-bundle-size budget before a line of routing code is written. Wiring `Routes`, `loadChildren`, and a preloading strategy is straightforward **implementation**. At **code review**, the useful questions are "should this new section be its own lazy module?" and "does this route's `data` duplicate logic that belongs in a guard/resolver?" At **deployment/release**, CI bundle-size or Lighthouse budgets are literally measuring per-route chunks, so a failing budget gate traces straight back to routing decisions. In **maintenance**, "cannot match any routes" and redirect-loop bugs are the recurring production/debugging pattern, almost always route-order or `pathMatch` mistakes.
+
+### 💼 SDE Interview & Job Search Angle
+- **Likely question:** "Walk me through what happens end-to-end when a user clicks a link to a lazy-loaded route."
+- **Strong answer:** The router parses the URL into a `UrlTree`, recognizes it against the `Routes` config to build a `RouterStateSnapshot`, runs guards, loads the lazy chunk if the module hasn't been fetched yet (skipped entirely if a preloading strategy already fetched it in the background), runs resolvers to get required data, then activates the route and renders components into the outlets. It's a single RxJS pipeline under the hood, not an isolated "swap component" call.
+- **Level-up:** A junior answer stops at "it loads the component." A senior answer distinguishes lazy loading (what's in the initial bundle) from preloading (when the rest arrives), explains that a custom `PreloadingStrategy` reading route `data` avoids wasting bandwidth on rarely-visited sections, and knows route order/`pathMatch` affects which config actually matches.
+
 ---
 
 ## 2) Route Guards
@@ -208,6 +299,10 @@ Routes:
   - `CanActivate`, `CanActivateChild`
   - `CanDeactivate<T>`
   - `CanLoad` (block lazy module loading)
+
+📖 **Plain-English definition**: A guard is a yes/no (or "redirect instead") check that runs *before* Angular lets you enter or leave a route — like a bouncer checking ID before you walk through a door, or a gate agent asking if you're really allowed to skip this exit.
+
+🧪 **SDET / Test Automation Angle**: `CanActivate` is exactly the mechanism behind auth-gated pages, and it's also the reason E2E suites don't need to automate a full login UI on every single test. The two common bypass strategies are: (1) mock the guard's dependency (the auth service / token store) so `canActivate()` always resolves `true` in test builds, or (2) seed `localStorage`/`sessionStorage`/cookies with a valid token directly via the test framework (`page.addInitScript`, `cy.window()`, etc.) before navigating, so the real guard logic runs but sees an already-authenticated user. Both are far faster and less flaky than clicking through a login form for every spec, and they isolate "does the auth guard work" tests (a handful) from "does this feature work" tests (which shouldn't care about login at all).
 
 ### Why it exists ✅
 - 🔐 Centralized authorization (no scattered checks).
@@ -220,6 +315,7 @@ Routes:
   - `false` -> cancel
   - `UrlTree` -> redirect (recommended)
 - Guards can be async (observable/promise).
+- Order matters and is fixed: `CanLoad`/`CanMatch`-style checks gate whether a lazy module is even **fetched**, then for the matched route tree, `CanActivateChild` runs top-down for each parent, and finally `CanActivate` runs for the leaf route being activated. Angular resolves each guard through the **dependency injector** (which is why `@Injectable({ providedIn: 'root' })` is enough — no manual registration), then normalizes whatever the guard returns (`boolean`, `Promise`, `Observable`) into an observable via an internal `wrapIntoObservable` helper so all guards can be composed with the same RxJS operators (`concatMap`/`every`-style short-circuiting). The first guard that resolves `false` or a `UrlTree` short-circuits the whole chain — later guards and resolvers never run.
 
 ### Code examples
 
@@ -307,12 +403,24 @@ export class PendingChangesGuard implements CanDeactivate<CanLeave> {
 - Mention `UrlTree` return and guard completion (`take(1)`).
 - Explain "component renders only if guards pass".
 
+### 🔄 SDLC Angle
+Guards start as a **requirements/design** decision — what's the app's auth model (roles? feature flags? ownership checks?), and which routes need which checks — before any `CanActivate` class exists. Writing the guard classes is routine **implementation**. Guards matter most at **code review**: the classic review question is "is this actually enforced everywhere, or can a user bypass it by deep-linking straight into a child/lazy route that isn't itself guarded?" — a guard on the parent route doesn't automatically protect every nested path. In **testing**, guards are usually mocked or bypassed with a seeded token rather than exercised through a real login UI. In **production/maintenance**, a guard whose observable never completes is a "stuck navigation" bug report, and a guard that only checks client-side state (no server-side enforcement) is a security incident waiting to happen.
+
+### 💼 SDE Interview & Job Search Angle
+- **Likely question:** "How would you protect an admin-only route in Angular, and what's a common way that protection ends up broken in practice?"
+- **Strong answer:** Implement `CanActivate` (and `CanActivateChild` for nested routes) returning `true`, `false`, or preferably a `UrlTree` redirect to `/login` or `/forbidden`, resolved via DI so no manual registration is needed. A common way this breaks is guarding only the top-level route while a child or lazy-loaded route underneath it has no guard of its own, so a direct URL still gets in — or relying on the guard alone with no server-side authorization check, since a client-side guard is a UX convenience, not a real security boundary.
+- **Level-up:** A junior answer treats the guard as "the" security control. A senior answer explicitly separates client-side guards (better UX, avoid showing UI the user can't use) from server-side authorization (the actual security enforcement), and knows guard order is fixed (`CanLoad`/`CanMatch` → `CanActivateChild` top-down → `CanActivate`) so a single `false`/`UrlTree` short-circuits the rest of the chain.
+
 ---
 
 ## 3) Route Resolvers
 
 ### Concepts
 - Resolvers fetch required data before a route activates and attach it to `ActivatedRoute.data`.
+
+📖 **Plain-English definition**: A resolver is a "fetch this data first" step Angular runs automatically before it shows you the page, so the page never renders in a half-ready, empty-then-populated state.
+
+🧪 **SDET / Test Automation Angle**: Because navigation is *blocked* until the resolver's data arrives, "the page is ready" means something different than on a component that fetches its own data after rendering. For a resolver-backed route, waiting for a specific, data-dependent DOM element (e.g., the item title text, not a generic spinner) to appear is a reliable readiness signal — there's no in-between state where the route is active but the data hasn't arrived yet. This is more robust than a fixed `sleep()`/`cy.wait(ms)`, and it also means flaky "sometimes the detail page is blank" bugs are more likely a resolver error-handling gap (see the `catchError` pattern below) than a timing issue in the test.
 
 ### Why it exists ✅
 - 🧊 Prevents UI flash: you can render the page with data already available.
@@ -321,6 +429,7 @@ export class PendingChangesGuard implements CanDeactivate<CanLeave> {
 ### How Angular uses it internally 🔍
 - Resolvers run after guards succeed, before activation.
 - If the resolver errors, navigation can be canceled unless handled.
+- Internally this is the `resolveData` step of the navigation pipeline. If a route declares multiple resolvers (`resolve: { item: ItemResolver, perms: PermsResolver }`), Angular runs them **concurrently** (conceptually a `forkJoin` over each resolver's observable) rather than one after another, then merges all results into a single object on `ActivatedRouteSnapshot.data` once every resolver has emitted. An observable that never completes (e.g., a `Subject` with no terminal value) leaves the whole navigation hanging forever — the same class of bug as an async validator or guard that never completes, and it's why the example below always funnels errors through `catchError` instead of letting them propagate.
 
 ### Code example
 `item.resolver.ts`:
@@ -368,6 +477,14 @@ item$ = this.route.data.pipe(map((d) => d['item'] as ItemDto));
 
 ### 🎯 Interview insights
 - Strong answer: "resolvers can improve UX, but overuse can delay navigation; choose wisely."
+
+### 🔄 SDLC Angle
+"Resolver vs fetch-in-component" is a **design/implementation** trade-off made per feature: does this page need its data before it can render meaningfully, or is a loading skeleton acceptable? That decision belongs early, not as an afterthought. At **code review**, the thing to check is error handling — a resolver without a `catchError` can leave a navigation hanging forever, which is a much worse failure mode than a component that fails to fetch after rendering. In **testing**, resolver-backed routes have a cleaner readiness signal (data-dependent DOM appears, no in-between empty state), which is why they're easier to test reliably. In **production/maintenance**, "the detail page is sometimes blank" is a classic resolver-error-handling gap, not a flaky-test problem.
+
+### 💼 SDE Interview & Job Search Angle
+- **Likely question:** "When would you use a resolver instead of just fetching data in `ngOnInit`?"
+- **Strong answer:** Use a resolver when the page can't render anything meaningful without the data — it blocks navigation until the data (or a fallback) is ready, so there's no flash of an empty state. Fetch in the component itself when the data is optional, slow, or non-blocking, since a resolver on a slow API directly delays navigation and can make the whole app feel unresponsive.
+- **Level-up:** A junior answer says "resolvers pre-fetch data." A senior answer adds that resolvers with multiple entries run concurrently (like a `forkJoin`), that an observable which never completes hangs the navigation exactly like a guard that never completes, and that resolver errors must be funneled through `catchError` with an explicit redirect/fallback rather than left to propagate.
 
 ---
 

@@ -7,6 +7,22 @@ This is the exact sequence I would use to onboard a React developer into an Angu
 
 # Angular Learning Roadmap (React-to-Angular Oriented)
 
+> 🎯 **Who this roadmap is for:** You're learning Angular 14 for two jobs at once — building features, and (as an SDET) testing them well. As you go through each phase, you're not just asking "how does this work?" but also "how would I automate/verify this, and how would I mock it in a test?" Every phase folder now carries the same two callouts alongside the original dev-focused notes: 📖 a plain-English definition for each major concept, and 🧪 an SDET / Test Automation angle connecting it to real automation-testing decisions (stable selectors, mocking strategy, async waits, etc.).
+
+---
+
+## How to Use This for Job Search 💼
+
+This roadmap is not just a "learn Angular" checklist — it doubles as SDE interview prep material. Every phase folder now also carries 🔄 **SDLC Angle** callouts (which part of the software development life cycle — design, implementation, code review, testing, deployment, or on-call/maintenance — this concept shows up in, and what a developer actually has to decide there) and 💼 **SDE Interview & Job Search Angle** callouts (a realistic interview question, a model spoken answer, and what separates a junior answer from a senior one). Together, these turn "I studied Angular" into "I can defend my Angular decisions in front of an interviewer."
+
+A few ways to actually use this for job hunting:
+
+- **Screen vs. onsite calibration:** the phase order roughly tracks how deep an interviewer is likely to go. PHASE 0–2 topics (TypeScript in Angular, decorators, DI, RxJS basics) are classic technical-screen material — expect them in a 30-45 minute call. PHASE 6–9 topics (change detection internals, performance, state management, testing strategy) are onsite/deep-dive territory, where interviewers probe production trade-offs, not definitions.
+- **Turn each 💼 callout into a flashcard:** read the "Likely question" first and try to answer out loud before reading the "Strong answer" — that's a much better rehearsal than re-reading notes passively.
+- **Use the "Level-up" lines to sound senior:** they call out the specific trade-off or edge case that separates a candidate who memorized a definition from one who has actually shipped and debugged the concept in production — mention that caveat unprompted and it signals real experience.
+
+---
+
 ## PHASE 0 — Prerequisites Alignment (Very Short)
 
 _(You likely know most of this, but Angular is strict)_
@@ -45,7 +61,7 @@ _(You likely know most of this, but Angular is strict)_
 - Component class vs template
 - Component metadata
 - Change detection basics
-- Component communication (Input / Output)
+- Component communication (Input / Output) — what a Page/Component Object hooks into
 
 ---
 
@@ -104,7 +120,7 @@ _(You likely know most of this, but Angular is strict)_
 - `map`, `switchMap`, `mergeMap`
 - `Subject`, `BehaviorSubject`
 - Async pipe
-- Memory leak prevention
+- Memory leak prevention — a common root cause of flaky/slow E2E waits
 
 > This replaces React hooks thinking.
 
@@ -168,7 +184,7 @@ _(You likely know most of this, but Angular is strict)_
 - GET/POST/PUT/DELETE
 - Typed responses
 - Error handling
-- Interceptors
+- Interceptors — the seam you mock at with `HttpTestingController` / `cy.intercept`
 
 ---
 
@@ -194,7 +210,7 @@ _(You likely know most of this, but Angular is strict)_
 
 ### 18. NgZone & Manual Change Detection (Angular 14)
 
-- What `zone.js` does (high level)
+- What `zone.js` does (high level) — historically why Protractor could auto-wait
 - When to use `ChangeDetectorRef` (`markForCheck`, `detectChanges`)
 - `runOutsideAngular` for high-frequency events (advanced)
 - Practical performance checklist (trackBy, OnPush, async pipe)
@@ -264,6 +280,7 @@ _(You likely know most of this, but Angular is strict)_
 - Angular best practices
 - Common anti-patterns
 - Migration tips from React
+- Protractor is deprecated for Angular 14+ — use Cypress / Playwright / WebdriverIO with explicit waits
 
 ---
 

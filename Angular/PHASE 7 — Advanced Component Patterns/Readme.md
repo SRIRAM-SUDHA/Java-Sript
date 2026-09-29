@@ -27,14 +27,19 @@ Master advanced composition patterns (projection, queries), lifecycle timing, an
 - Content projection lets a component accept and render child content inside its template using `<ng-content>`.
 - Angular projects **DOM nodes** into slots. This is not the same as React's element composition.
 
+📖 **Plain-English definition**: content projection is Angular's way of letting a component say "put whatever HTML the caller hands me, right here" instead of hardcoding every bit of markup itself — like a picture-frame component: you supply the picture, the frame component just wraps it in the right spot.
+
+🧪 **SDET / Test Automation Angle**: because a projecting component (card, modal, tabs) doesn't own the markup inside its slots, the same `<app-modal>` can render wildly different DOM depending on what's projected into it — one screen might project a `<form>`, another a `<table>`. Automation selectors should never assume a fixed structure "inside" the projecting component (e.g. `.modal > div:nth-child(2) > button`); instead, target stable attributes on the projected content itself, like `data-testid="confirm-delete-btn"` on the button the caller placed there. This also matters for Page Object Models: the modal's "shell" locators (header/body/footer regions) belong to the modal's own object, but the content inside a slot belongs to whatever component/page projected it in.
+
 ### Why it exists ✅
 - 🧩 Build layout components (cards, modals, tabs) without inventing 20 input properties.
 - 🧼 Keep UI composition flexible and readable at the call site.
 
 ### How Angular uses it internally 🧠
-- Angular compiles `<ng-content>` placeholders.
-- At runtime, it distributes the parent's projected nodes into those placeholders.
-- Multi-slot projection uses CSS selectors to decide which nodes go where.
+- Angular compiles `<ng-content>` placeholders at **compile time** into projection instructions on the component's generated view factory — the `select` attribute becomes a CSS-selector-like matcher baked into that factory, not something evaluated at runtime per click.
+- At runtime, Angular walks the **top-level nodes** the parent passed between the component's tags and buckets each one into the first matching `<ng-content select="...">` slot; matching only looks at each node's own tag/attributes, not its descendants.
+- Multi-slot projection is resolved in slot order: a node goes into the first slot whose selector matches; a plain `<ng-content></ng-content>` (no `select`) acts as the catch-all for anything left over. If there's no catch-all slot, unmatched projected nodes are simply not rendered.
+- Projected content keeps the **parent's binding context** — expressions inside projected markup still resolve against the parent component's `this`, not the child's, since Angular never re-parents the template's data context during projection.
 
 ### Code examples
 
@@ -99,6 +104,14 @@ Usage:
 ### 🎯 Interview insights
 - Strong answer: "Angular projects DOM nodes into `<ng-content>`; multi-slot uses selectors."
 
+### 🔄 SDLC Angle
+Content projection decisions mostly surface at **Design** time — when you're designing a shared component (a card, modal, or tabs component) that other teams will reuse, you decide up front what should be a projectable slot vs. a plain `@Input`. It resurfaces at **Code Review**: reviewers push back on components that keep growing new `@Input` properties for layout tweaks instead of exposing a slot, or on projection APIs so deeply nested that nobody can tell what goes where. It's rarely a Maintenance-phase concern on its own, unless the slot "contract" (e.g. which attributes like `modalTitle`/`modalActions` are expected) was never documented — then every new consumer has to reverse-engineer it from the component's HTML.
+
+### 💼 SDE Interview & Job Search Angle
+- **Likely question:** "How would you design a reusable Modal or Card component that other teams can use for very different content without you constantly adding new `@Input` properties?"
+- **Strong answer:** Use `<ng-content>` for layout flexibility — a single catch-all slot for simple wrappers, multi-slot projection with `select="[attr]"` when the component has fixed regions (header/body/footer). Keep `@Input`s for actual configuration (size, disabled state) and projection for "arbitrary markup the caller controls." Mention that Angular projects raw DOM nodes matched at compile time, unlike React's more dynamic `children`/composition model.
+- **Level-up:** A junior answer stops at "use `ng-content`." A senior answer adds the failure modes — unmatched projected nodes silently disappear if there's no catch-all slot, projected content keeps the *parent's* binding context (not the child's), and documents the slot contract so consumers don't have to guess.
+
 ---
 
 ## 2) View & Content Queries (`@ViewChild` / `@ContentChild`)
@@ -111,11 +124,9 @@ Usage:
   - directives
   - `ElementRef` (last resort)
 
-### Why it exists ✅
-- 🧰 Sometimes you need imperative coordination:
-  - focus management
-  - measuring element size
-  - calling a child component API
+📖 **Plain-English definition**: `@ViewChild`/`@ContentChild` are how a component reaches out and grabs a handle to a piece of its own template (or to content someone projected into it) — similar in spirit to `document.querySelector`, except Angular decides *when* that handle becomes available based on its own rendering lifecycle, not the moment your code runs.
+
+🧪 **SDET / Test Automation Angle**: these decorators are usually a sign that something happens **imperatively, outside the normal binding cycle** — an input autofocusing itself, a child component running its own validation, a toast appearing after a delay. For an SDET this is a flag that the element's "ready to interact with" moment may lag behind the DOM simply existing: a test that clicks an input the instant it appears in the DOM can flake if that input's focus/state is still being set via a `@ViewChild` call in `ngAfterViewInit`. When a bug report mentions "works most of the time but occasionally the focus/highlight doesn't happen," check whether a `@ViewChild`/`@ContentChild` timing issue (wrong lifecycle hook, or `static` mismatch) is the root cause before blaming the test.
 
 ### Lifecycle timing (this matters) 🧠
 - View queries:
@@ -124,6 +135,11 @@ Usage:
 - Content queries:
   - resolve after content projection
   - use `ngAfterContentInit`
+- **`static: true` vs `static: false` (why both exist)**:
+  - `{ static: true }` resolves the query **before** the first change detection run, so it's already populated in `ngOnInit`. Angular can only do this when the queried node isn't inside a structural directive (`*ngIf`/`*ngFor`) — i.e. its presence can't change based on data.
+  - `{ static: false }` (the default since Angular 8+) resolves **after** the view has been checked once, in `ngAfterViewInit`, because Angular must run change detection first to know whether structural directives actually rendered the node at all.
+  - Content queries (`@ContentChild`/`@ContentChildren`) always resolve after `ngAfterContentInit`/`ngAfterContentChecked` — one tick later than view queries — because Angular has to finish projecting the parent's content into the component's slots before it can query inside that projected content.
+  - Practical effect: reading a `@ViewChild` value inside `ngOnInit` when it needs `static: false` (or vice-versa) silently returns `undefined` — a very common source of "why is my ref null" bugs.
 
 ### Code examples
 
@@ -198,6 +214,14 @@ export class ModalComponent implements AfterContentInit {
 ### 🎯 Interview insights
 - Mention lifecycle timing and why `static` exists (compile-time query timing).
 
+### 🔄 SDLC Angle
+This concept is squarely an **Implementation-phase** decision (picking `static: true` vs `false`, `ViewChild` vs `ContentChild`) that turns into a **Maintenance/debugging** problem later. "Why is my ref undefined" and "the focus/highlight only sometimes works" are classic production bug reports that trace back to a lifecycle-timing mismatch (wrong hook, wrong `static` flag, or querying before content projection has run) rather than to "flaky" UI — so this is exactly the kind of thing an on-call developer needs to recognize fast instead of guessing at CSS or randomly adding `setTimeout`s.
+
+### 💼 SDE Interview & Job Search Angle
+- **Likely question:** "You inject a `@ViewChild` and it's `undefined` inside `ngOnInit` — walk me through why, and how you'd fix it."
+- **Strong answer:** View queries populate after the view is created; with the default `static: false` Angular must run change detection once first (because a structural directive like `*ngIf` might mean the node doesn't exist yet), so the value is only guaranteed inside `ngAfterViewInit`. `static: true` can only be used when the node's presence can't depend on data (i.e. not inside `*ngIf`/`*ngFor`), letting Angular resolve it before `ngOnInit`. Content queries (`@ContentChild`) resolve one tick later still, in `ngAfterContentInit`, because projection has to finish first.
+- **Level-up:** A junior answer names the two hooks. A senior answer explains *why* the timing exists mechanically (CD must run before Angular can know if a structural directive rendered the node), and connects it to a real debugging story — e.g. tracing an intermittent "focus doesn't happen" bug back to a `static`/hook mismatch instead of blaming the browser or the test.
+
 ---
 
 ## 3) Component Communication Patterns
@@ -209,13 +233,14 @@ Communication tools, in order of preference:
 3. **Feature facade/service** for shared state and business logic
 4. **Component-level providers** for scoped state (wizard/page instance)
 
-### Why it exists ✅
-- 🧱 Keeps your component tree maintainable.
-- 🧪 Keeps state and side effects testable (services).
+📖 **Plain-English definition**: this is just "how do two parts of the UI talk to each other" — either directly, like passing a note from parent to child and back (`@Input`/`@Output`), or indirectly, like everyone reading and writing to the same shared whiteboard (a service that holds state).
+
+🧪 **SDET / Test Automation Angle**: apps that centralize state in a shared service/facade (instead of passing data down through five levels of `@Input`) are dramatically easier to drive in tests. In an integration test (e.g. Angular `TestBed` + component harness), you can often inject the facade/service directly and call `facade.setState(...)` or read `facade.data$` to seed or assert application state, instead of clicking through the UI just to get the app into the state under test. This is faster and far less flaky than pure end-to-end UI setup, and it's a strong reason to push for facade-based architecture even outside of "clean code" arguments — it directly lowers test cost and flakiness.
 
 ### How Angular uses it internally 🔍
-- Inputs update during change detection.
-- Outputs use `EventEmitter` (a Subject) to emit values on events.
+- Inputs are compiled into property-binding instructions (`ɵɵproperty`) that Angular re-evaluates top-down on every change detection pass; when several bound inputs change in the same cycle, Angular batches them into a single `ngOnChanges` call with one `SimpleChanges` map rather than firing once per property.
+- Outputs use `EventEmitter`, which is a thin wrapper around an RxJS `Subject` — the compiled template subscribes to it via a `ɵɵlistener` instruction, and Angular automatically unsubscribes when the component is destroyed, so you don't manage that subscription by hand.
+- A shared service registered with `providedIn: 'root'` (or provided in `CoreModule`, imported once) becomes a true singleton in the root injector, so every component that injects it shares the exact same instance/state — this is the mechanical reason "service as store" works at all.
 
 ### Real-world patterns 🧰
 
@@ -261,6 +286,14 @@ export class WizardPageComponent {}
 ### 🎯 Interview insights
 - A senior answer compares options and chooses the simplest:
   - "Inputs/outputs locally; facade for feature state; component providers for scoped state."
+
+### 🔄 SDLC Angle
+Choosing a communication pattern is a **Design-phase** call made when a feature is first sketched out (how many components will need this piece of state, will it cross feature boundaries), but it shows up constantly at **Code Review** too — "this should be an `@Output`, not a shared Subject" or "you're prop-drilling this through three components, pull it into a facade" are some of the most common review comments on Angular PRs. Get it wrong early and it becomes a **Maintenance** tax: prop-drilling and ad-hoc event buses are exactly the kind of thing that make a codebase progressively harder to change six months later.
+
+### 💼 SDE Interview & Job Search Angle
+- **Likely question:** "Two sibling components need to share state that changes often — how do you wire that up, and why not just use a global event bus?"
+- **Strong answer:** Reach for the least powerful tool that fits: `@Input`/`@Output` for direct parent-child, a feature facade/service (singleton via `providedIn: 'root'` or `CoreModule`) when several components across a feature need the same state, and component-level `providers` when the state should be scoped to one page/wizard instance rather than shared app-wide. Explain that a shared service works because Angular's DI gives every injector-scoped consumer the *same instance*.
+- **Level-up:** A junior reaches for a shared service (or worse, a global Subject) for everything. A senior explains the trade-off — global event buses are hard to trace/debug because any consumer can emit or listen from anywhere — and can also explain how a facade-based design pays off in testability (inject the facade in `TestBed` and set state directly instead of driving the UI).
 
 ---
 
