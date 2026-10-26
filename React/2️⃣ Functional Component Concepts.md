@@ -189,6 +189,52 @@ function Parent() {
 - React stores **function reference** and dependency array.
 - Returns **same function object** until dependencies change.
 
+
+### When should you *actually* use `useCallback`?
+
+You only need `useCallback` in two main scenarios:
+
+#### 1. Passing to a Child Component Wrapped in `React.memo`
+
+If your child component is optimized with `React.memo` so it *only* re-renders when its props change, then passing a stable function reference via `useCallback` is necessary. Otherwise, a fresh function reference on every parent render would break the memoization and force the child to re-render.
+
+```jsx
+// The Child only re-renders if its props change
+const MemoizedChild = React.memo(Child);
+
+function Parent() {
+  const [count, setCount] = useState(0);
+
+  // useCallback is useful here because Child is memoized
+  const handleClick = useCallback(() => {
+    console.log("Clicked");
+  }, []);
+
+  return <MemoizedChild onClick={handleClick} />;
+}
+
+```
+
+#### 2. Using it as a Dependency in Another Hook
+
+If your function is used inside a `useEffect`, `useMemo`, or another hook's dependency array, wrapping it in `useCallback` prevents infinite loops or unnecessary effect triggers.
+
+```jsx
+const fetchData = useCallback(() => {
+  api.get(`/user/${userId}`);
+}, [userId]); // Depends on userId
+
+useEffect(() => {
+  fetchData();
+}, [fetchData]); // Triggers only when fetchData changes (i.e., when userId changes)
+
+```
+
+---
+
+### Summary: The Golden Rule
+
+> **Don't prematurely optimize.** Write your code clean and normal first. Only reach for `useCallback` (or `useMemo`) when you are actually solving a proven performance bottleneck or satisfying a hook dependency requirement.
 ---
 
 ## **7. useReducer**
@@ -648,6 +694,137 @@ useEffect(() => {
 ```
 
 - Common pattern for **search inputs** or **resize events**.
+
+<details>
+
+<summary><b>View Code Example</b></summary>
+
+**Debounce** and **throttling** are techniques used to control how often a function is executed when rapid, repetitive events occur (like typing in a search bar, scrolling, or window resizing).
+
+* **Debounce:** Waits until the user *stops* doing an action for a specified duration before executing the function. (Great for search inputs).
+* **Throttle:** Ensures the function executes at most *once every X milliseconds*, no matter how many times the event fires. (Great for window resizing or scroll tracking).
+
+Here is how to implement both cleanly in React.
+
+---
+
+### 1. How to Implement Debounce in React
+
+The best way to handle debounce in React is by combining `useEffect` and `setTimeout`, or by using a custom hook.
+
+Here is a practical example of a **search input** that debounces API calls:
+
+```jsx
+import React, { useState, useEffect } from "react";
+
+function SearchComponent() {
+  const [searchTerm, setSearchTerm] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+
+  // 1. Update the debounced value after a delay
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(searchTerm);
+    }, 500); // Wait 500ms after the user stops typing
+
+    // 2. Cleanup: Clear the timeout if the user types again before 500ms
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
+
+  // 3. Perform the "API call" whenever the debounced value changes
+  useEffect(() => {
+    if (debouncedSearch) {
+      console.log("Making API call for:", debouncedSearch);
+      // fetchSearchResults(debouncedSearch);
+    }
+  }, [debouncedSearch]);
+
+  return (
+    <input
+      type="text"
+      placeholder="Search..."
+      value={searchTerm}
+      onChange={(e) => setSearchTerm(e.target.value)}
+    />
+  );
+}
+
+```
+
+#### Why the cleanup function (`clearTimeout`) matters:
+
+Every time `searchTerm` changes, the component re-runs, the old timeout is cleared, and a *new* timer starts. This ensures the search function only runs once the typing pauses for the full 500ms.
+
+---
+
+### 2. How to Implement Throttle in React
+
+Throttling ensures a function fires at regular intervals. A common way to implement this in React without external libraries is using `useRef` to track the last execution time.
+
+Here is an example for a **window resize** or **button click spams**:
+
+```jsx
+import React, { useState, useRef, useCallback } from "react";
+
+function ThrottledButton() {
+  const [count, setCount] = useState(0);
+  
+  // Use a ref to store the timestamp of the last execution
+  const lastExecuted = useRef(0);
+
+  const handleThrottledClick = useCallback(() => {
+    const now = Date.now();
+    const limit = 2000; // Allow click only once every 2 seconds
+
+    if (now - lastExecuted.current >= limit) {
+      lastExecuted.current = now;
+      setCount((prev) => prev + 1);
+      console.log("Action executed!");
+    } else {
+      console.log("Throttled! Please wait.");
+    }
+  }, []);
+
+  return (
+    <div>
+      <p>Clicked count: {count}</p>
+      <button onClick={handleThrottledClick}>Click me fast (2s limit)</button>
+    </div>
+  );
+}
+
+```
+
+---
+
+### Pro Tip: Using Libraries (Lodash)
+
+Writing your own debounce/throttle works great for simple use cases, but for complex event handling (like window scrolling), developers often use **Lodash**:
+
+```bash
+npm install lodash
+
+```
+
+```jsx
+import { debounce, throttle } from "lodash";
+import React, { useCallback } from "react";
+
+function LodashExample() {
+  // useCallback is essential here so Lodash doesn't recreate the debounced function on every render
+  const handleDebouncedSearch = useCallback(
+    debounce((text) => {
+      console.log("Searching lodash:", text);
+    }, 500),
+    []
+  );
+
+  return <input onChange={(e) => handleDebouncedSearch(e.target.value)} />;
+}
+
+```
+
+</details>
 
 ---
 

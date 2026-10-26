@@ -43,6 +43,91 @@ Perfect 👍 Let’s zoom in on **BOM (Browser Object Model)**.
 
 ---
 
+Your code is almost correct, Sri. You're using the browser's Geolocation API to get the user's current location.
+
+```
+navigator.geolocation.getCurrentPosition(
+  (position) => console.log(position)
+);
+```
+
+### 1. Access latitude and longitude
+
+The `position` object contains a `coords` property.
+
+```
+navigator.geolocation.getCurrentPosition(
+  (position) => {
+    console.log(position.coords.latitude);
+    console.log(position.coords.longitude);
+  },
+  (error) => {
+    console.error(error.message);
+  }
+);
+```
+
+### 2. What does `position` contain?
+
+```
+{
+  coords: {
+    latitude: 17.385,
+    longitude: 78.4867,
+    accuracy: 20
+  },
+  timestamp: 1792300000000
+}
+```
+
+Example values only.
+
+| Property           | Meaning                             |
+| ------------------ | ----------------------------------- |
+| `coords.latitude`  | Latitude                            |
+| `coords.longitude` | Longitude                           |
+| `coords.accuracy`  | Estimated accuracy in meters        |
+| `timestamp`        | Time when the position was obtained |
+
+### 3. Why might it not work?
+
+- Permission denied: The user blocked location access.
+- Timeout: The browser couldn't obtain the location in time.
+- Insecure context: Geolocation generally requires HTTPS or `localhost`.
+- Callback missing: Your original code has no error callback.
+
+### 4. Best practice: handle success and errors
+
+```
+navigator.geolocation.getCurrentPosition(
+  (position) => {
+    const { latitude, longitude } = position.coords;
+
+    console.log({ latitude, longitude });
+  },
+  (error) => {
+    switch (error.code) {
+      case error.PERMISSION_DENIED:
+        console.log("Location permission denied");
+        break;
+      case error.POSITION_UNAVAILABLE:
+        console.log("Location unavailable");
+        break;
+      case error.TIMEOUT:
+        console.log("Location request timed out");
+        break;
+    }
+  },
+  {
+    enableHighAccuracy: true,
+    timeout: 10000,
+    maximumAge: 0
+  }
+);
+```
+
+Frontend interview tip: `getCurrentPosition()` retrieves a location once. For continuous location updates, use `navigator.geolocation.watchPosition()` and clean up with `navigator.geolocation.clearWatch(watchId)`.
+
 ### 3. **`screen` object**
 
 - Gives information about the **user’s screen**.
